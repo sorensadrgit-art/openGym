@@ -4,8 +4,8 @@
 //
 // One entry per food eaten. `amount` is in `basis` (g or ml); `per100` is the label's energy and
 // macros per 100 of that basis, each a number or null for "the label does not say". `src` is where
-// the numbers came from: { kind: 'off', code } for an Open Food Facts barcode, { kind: 'manual' }
-// for typed in.
+// the numbers came from: { kind: 'off', code } for an Open Food Facts barcode, { kind: 'nutritrace',
+// id } for a food of the user's NutriTrace library, { kind: 'manual' } for typed in.
 //
 // It syncs as one of sync-merge.js's STAMPED_MAPS (like dayPhotos): every entry carries its own
 // `_ts`, the merge keeps every id either copy has and of an id both have the one edited last. So a
@@ -48,12 +48,18 @@ export function foodEntryProblem(input) {
   return null
 }
 
+const readSource = src => {
+  if (src?.kind === 'off' && /^\d{8,14}$/.test(String(src.code))) return { kind: 'off', code: String(src.code) }
+  if (src?.kind === 'nutritrace' && typeof src.id === 'string' && src.id && src.id.length <= 64) return { kind: 'nutritrace', id: src.id }
+  return { kind: 'manual' }
+}
+
 /** One stored entry read back, cleaned, or null for a removed or malformed one. */
 export function readFood(entry, id) {
   if (!isMap(entry) || foodEntryProblem(entry)) return null
   const per = {}
   for (const k of NUTRIENTS) per[k] = num(entry.per100?.[k])
-  const src = entry.src?.kind === 'off' && /^\d{8,14}$/.test(String(entry.src.code)) ? { kind: 'off', code: String(entry.src.code) } : { kind: 'manual' }
+  const src = readSource(entry.src)
   return {
     ...(id != null ? { id } : {}),
     d: entry.d, meal: entry.meal, name: text(entry.name, 80),
@@ -140,5 +146,20 @@ export function fromLookup(food, { d, meal, amount }) {
     ...(text(food?.brand, 60) ? { brand: text(food.brand, 60) } : {}),
     amount: num(amount), basis: food?.basis === '100ml' ? 'ml' : 'g', per100: per,
     src: /^\d{8,14}$/.test(String(food?.barcode)) ? { kind: 'off', code: String(food.barcode) } : { kind: 'manual' },
+  }
+}
+
+/** A diary entry from a /api/integrations/nutritrace/foods food, or null for one the diary cannot
+ * weigh: NutriTrace foods in cups, pieces or custom units have no grams without a density, and the
+ * diary does not guess one. */
+export function fromNutriTrace(food, { d, meal, amount }) {
+  if (!food || !isMap(food.per100) || (food.basis !== '100g' && food.basis !== '100ml')) return null
+  const per = {}
+  for (const k of NUTRIENTS) per[k] = num(food.per100[k])
+  return {
+    d, meal, name: text(food.name, 80) || 'Unnamed food',
+    ...(text(food.brand, 60) ? { brand: text(food.brand, 60) } : {}),
+    amount: num(amount), basis: food.basis === '100ml' ? 'ml' : 'g', per100: per,
+    src: { kind: 'nutritrace', id: String(food.id).slice(0, 64) },
   }
 }

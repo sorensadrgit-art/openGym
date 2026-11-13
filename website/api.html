@@ -247,7 +247,7 @@ main.api-main .lead { color: var(--fg-2); max-width: 58ch; margin: 14px 0 0; fon
   <p class="api-facts">
     <span>OpenAPI 3.1.0</span>
     <span>openGym v1.4.3</span>
-    <span>93 endpoints</span>
+    <span>94 endpoints</span>
     <span>AGPL-3.0-or-later</span>
   </p>
 
@@ -3353,6 +3353,54 @@ main.api-main .lead { color: var(--fg-2); max-width: 58ch; margin: 14px 0 0; fon
   <div class="prow rrow">
     <span class="r-code s4">404</span>
     <span class="p-desc"><code>code</code> <code>off</code>: the server runs without <code>INTEGRATIONS</code> (the default). <code>code</code> <code>missing</code>: no such connection on this profile (another profile's id is the same answer).<span class="r-sig"><code>{&quot;error&quot;:&quot;integrations are off on this server&quot;}</code></span></span>
+  </div>
+    </div>
+  </div>
+</details>
+
+<details class="ep" id="op-searchNutriTraceFoods">
+  <summary>
+    <span class="m get">GET</span>
+    <span class="ep-path"><code>/api/integrations/nutritrace/foods</code></span>
+    <span class="ep-chev" aria-hidden="true"></span>
+    <span class="ep-sum">Search the profile's own NutriTrace food library</span>
+  </summary>
+  <div class="ep-body">
+<p>Read only, for the Extension Lab's food diary. Needs <code>nutritrace</code> in <code>INTEGRATIONS</code> and a NutriTrace connection on the profile (<code>POST /api/integrations/connect</code> with <code>{ &quot;provider&quot;: &quot;nutritrace&quot;, &quot;url&quot;: &quot;https://…&quot;, &quot;token&quot;: &quot;nt_pat_…&quot; }</code>; the token needs the <code>read:foods</code> scope and is sealed on the server, never sent back). The server calls the instance's <code>GET /api/v1/foods</code> with the search text and nothing else, and answers at most 25 foods. NutriTrace's <code>nutrition</code> is read as per <code>portion</code> of <code>unit</code>; <code>per100</code> is given only when that unit is grams or millilitres. 30 searches a minute per profile.</p>
+    <p class="ep-auth"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span>Requires a session: the cookie set at sign-in, or <code>Authorization: Bearer &lt;token&gt;</code> from mobile-app pairing.</span></p>
+<p class="ep-h">Query parameters</p><div class="ptab">
+  <div class="prow">
+    <span class="p-name">q</span>
+    <span class="p-type">string <span class="p-hint">(&le; 80 chars)</span></span>
+    <span class="p-desc">Search text (case-insensitive name and brand match in NutriTrace), cut to 80 characters.</span>
+  </div>
+</div>
+
+    <p class="ep-h">Responses</p>
+    <div class="ptab">
+  <div class="prow rrow">
+    <span class="r-code s2">200</span>
+    <span class="p-desc">The matching foods.<span class="r-sig">{ foods: object[], total: integer }</span></span>
+  </div>
+  <div class="prow rrow">
+    <span class="r-code s4">401</span>
+    <span class="p-desc">No session, expired/revoked session, or a disabled account.<span class="r-sig"><code>{&quot;error&quot;:&quot;not signed in&quot;}</code></span></span>
+  </div>
+  <div class="prow rrow">
+    <span class="r-code s4">404</span>
+    <span class="p-desc">Integrations are off, NutriTrace is not offered, or the profile has no NutriTrace connection.</span>
+  </div>
+  <div class="prow rrow">
+    <span class="r-code s4">409</span>
+    <span class="p-desc">The connection is paused.</span>
+  </div>
+  <div class="prow rrow">
+    <span class="r-code s4">429</span>
+    <span class="p-desc">Too many searches from this profile, or NutriTrace asked to slow down (<code>Retry-After</code>).</span>
+  </div>
+  <div class="prow rrow">
+    <span class="r-code s5">502</span>
+    <span class="p-desc">NutriTrace refused the token or scope, could not be reached, or answered with something unreadable; <code>code</code> says which.</span>
   </div>
     </div>
   </div>

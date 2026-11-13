@@ -202,8 +202,9 @@ written to disk. Switch providers on in `.env`:
 INTEGRATIONS=webhook
 ```
 
-Comma-separated; `webhook` is the one provider today (Strava is next, see below). Restart the api
-container after changing it.
+Comma-separated; `webhook` is the one provider upstream (Strava is next, see below). This fork also
+has `nutritrace`, a read-only reader of each profile's own NutriTrace food library for the Extension
+Lab's food diary ([ADDONS.md](ADDONS.md#nutritrace)). Restart the api container after changing it.
 
 ### Webhooks to your home network (`INTEGRATIONS_ALLOW_LAN`)
 

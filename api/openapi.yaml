@@ -2800,6 +2800,67 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/IntegrationsOff' }
 
+  /api/integrations/nutritrace/foods:
+    get:
+      tags: [integrations]
+      operationId: searchNutriTraceFoods
+      summary: Search the profile's own NutriTrace food library
+      description: |
+        Read only, for the Extension Lab's food diary. Needs `nutritrace` in `INTEGRATIONS` and a
+        NutriTrace connection on the profile (`POST /api/integrations/connect` with
+        `{ "provider": "nutritrace", "url": "https://…", "token": "nt_pat_…" }`; the token needs
+        the `read:foods` scope and is sealed on the server, never sent back). The server calls the
+        instance's `GET /api/v1/foods` with the search text and nothing else, and answers at most
+        25 foods. NutriTrace's `nutrition` is read as per `portion` of `unit`; `per100` is given
+        only when that unit is grams or millilitres. 30 searches a minute per profile.
+      parameters:
+        - name: q
+          in: query
+          required: false
+          description: Search text (case-insensitive name and brand match in NutriTrace), cut to 80 characters.
+          schema: { type: string, maxLength: 80 }
+      responses:
+        '200':
+          description: The matching foods.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  foods:
+                    type: array
+                    maxItems: 25
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        name: { type: string }
+                        brand: { type: string }
+                        barcode: { type: [string, 'null'] }
+                        portion: { type: [number, 'null'] }
+                        unit: { type: string }
+                        basis: { type: [string, 'null'], enum: ['100g', '100ml', null] }
+                        per100:
+                          type: [object, 'null']
+                          properties:
+                            kcal: { type: [number, 'null'] }
+                            proteinG: { type: [number, 'null'] }
+                            carbohydrateG: { type: [number, 'null'] }
+                            fatG: { type: [number, 'null'] }
+                        perPortion:
+                          type: object
+                          properties:
+                            kcal: { type: [number, 'null'] }
+                            proteinG: { type: [number, 'null'] }
+                            carbohydrateG: { type: [number, 'null'] }
+                            fatG: { type: [number, 'null'] }
+                  total: { type: integer }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { description: 'Integrations are off, NutriTrace is not offered, or the profile has no NutriTrace connection.' }
+        '409': { description: The connection is paused. }
+        '429': { description: 'Too many searches from this profile, or NutriTrace asked to slow down (`Retry-After`).' }
+        '502': { description: 'NutriTrace refused the token or scope, could not be reached, or answered with something unreadable; `code` says which.' }
+
   /api/activity:
     post:
       tags: [activity]

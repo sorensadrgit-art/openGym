@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   MEALS, foodEntryProblem, addFood, removeFood, restoreFood, readFood, foodsOn, nutrientsOf,
-  dayTotals, fromLookup, foodDays,
+  dayTotals, fromLookup, foodDays, fromNutriTrace,
 } from './nutrition-diary.js'
 import { mergeStates, resetIdsOf, STAMPED_MAPS } from './sync-merge.js'
 import { STAMPED_MAPS as API_STAMPED_MAPS } from '../../../api/sync-stamps.js'
@@ -133,5 +133,26 @@ describe('synced like every other per-entry map', () => {
   })
   it('a profile without a diary merges exactly as before', () => {
     expect('foodLog' in mergeStates(state({ _ts: 1 }), state({ _ts: 2 }))).toBe(false)
+  })
+})
+
+describe('from the NutriTrace food library', () => {
+  const skyr = { id: '7', name: 'Skyr', brand: 'Arla', portion: 150, unit: 'g', basis: '100g',
+    per100: { kcal: 63, proteinG: 11, carbohydrateG: 4, fatG: 0.2 }, perPortion: { kcal: 95, proteinG: 16.5, carbohydrateG: 6, fatG: 0.3 } }
+  it('logs grams of a food NutriTrace measures in g or mL, and remembers which food it was', () => {
+    const input = fromNutriTrace(skyr, { d: '2026-11-13', meal: 'breakfast', amount: 150 })
+    expect(input).toEqual({ d: '2026-11-13', meal: 'breakfast', name: 'Skyr', brand: 'Arla', amount: 150, basis: 'g',
+      per100: { kcal: 63, proteinG: 11, carbohydrateG: 4, fatG: 0.2 }, src: { kind: 'nutritrace', id: '7' } })
+    const S = state()
+    addFood(S, input, { now: 1, id: 'n1' })
+    expect(readFood(S.foodLog.n1).src).toEqual({ kind: 'nutritrace', id: '7' })
+    expect(nutrientsOf(readFood(S.foodLog.n1))).toEqual({ kcal: 95, proteinG: 16.5, carbohydrateG: 6, fatG: 0.3 })
+  })
+  it('refuses a food it cannot weigh (a cup, a piece) instead of guessing a density', () => {
+    expect(fromNutriTrace({ ...skyr, unit: 'cup', basis: null, per100: null }, { d: '2026-11-13', meal: 'lunch', amount: 1 })).toBe(null)
+  })
+  it('an odd source id read back from another device is dropped to manual, not trusted', () => {
+    expect(readFood({ ...oats, src: { kind: 'nutritrace', id: '' } }).src).toEqual({ kind: 'manual' })
+    expect(readFood({ ...oats, src: { kind: 'nutritrace', id: 'x'.repeat(65) } }).src).toEqual({ kind: 'manual' })
   })
 })

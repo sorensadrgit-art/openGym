@@ -67,7 +67,8 @@ something named).
 |---|---|---|---|
 | 0 | Extension Lab foundation | **Done** | Fixed: Open Food Facts v3.6 moved nutrients, every live lookup came back empty. Back button, label basis. |
 | 1 | Nutrition diary | **Done** | Built into openGym (above), not a separate service. |
-| 1b | NutriTrace adapter | Pending | See "NutriTrace" below. Needs a decision on calories before the workout push. |
+| 1b | NutriTrace food library (read) | **Done** | Server opt-in (`INTEGRATIONS=…,nutritrace`); per-profile token sealed on the server; search and log from the Lab. Checked against NutriTrace's source; not yet against a running instance. |
+| 1c | NutriTrace workout push | Pending | Waits on measured calories (see below). |
 | 2 | Mealie recipes and meal plans | Pending | Needs a Mealie instance and API token to build and test against. |
 | 3 | Liftosaur programming | Pending | Liftosaur's licence and Liftoscript evaluator to be reviewed; openGym's own progression engine stays. |
 | 4 | MediaPipe pose estimation | Pending | Apache-2.0; on-device only, camera permission, rep counting needs real video to validate. |
@@ -81,22 +82,49 @@ something named).
 ### NutriTrace
 
 [NutriTrace](https://github.com/TraceApps/nutritrace) (AGPL-3.0, Svelte + Express + SQLite) offers a
-Federation API at `/api/v1` with bearer tokens (`nt_pat_…`, minted in its Settings → API Tokens) and
-scopes. What its [reference](https://traceapps.github.io/docs/nutritrace/federation-api/) documents,
-checked 2026-11-13:
+Federation API at `/api/v1` with bearer tokens (`nt_pat_` plus 43 base64url characters, made in its
+Settings → API Tokens) and scopes.
 
-- `GET /api/v1/foods` (`read:foods`): the token owner's food library, `nutrition` with `kcal`,
-  `protein_g`, `carbs_g`, `fat_g`. This maps onto the diary's `per100` and is the planned adapter.
-- `POST /api/v1/workouts` (`write:workouts`) and `POST /api/v1/activity` (`write:activity`): both
-  **require** calories (`calories_burned` / `kcal`), idempotent by `external_id`.
-- No endpoint writes diary entries, so the diary itself cannot be mirrored into NutriTrace.
+**Read from the source, not only the docs site.** Checked 2026-11-13 against the repository at
+`888c966` (`server/routes/api/v1/*.js`, `server/middleware/bearer-auth.js`, `docs/federation.md`):
 
-openGym records no calories for a workout. Pushing workouts to NutriTrace therefore needs either a
-measured value (from a watch through Apple Health or Health Connect) or a labelled estimate
-(MET × body weight × duration). That is a product decision and is not built.
+- `GET /api/v1/me` (no scope) answers `{ user, instance, scopes }`.
+- `GET /api/v1/foods` (`read:foods`) answers `{ items, total, limit, offset }`. An item's
+  `nutrition` is the stored blob of nutrient ids, **per `portion` of `unit`** (`portion` defaults to
+  100, `unit` to `g`). The ids are `calories` (kcal), `proteins`, `carbohydrates`, `fat` (g) and
+  more. **The published docs page names them `kcal`, `protein_g`, `carbs_g`, `fat_g`, which the
+  server never uses**; the adapter reads the real ids and falls back to those.
+- 401 `auth_missing` / `auth_invalid`, 403 `auth_scope`.
+- `POST /api/v1/workouts` (`write:workouts`) and `POST /api/v1/activity` (`write:activity`) both
+  require calories and are idempotent by `external_id`.
+- **Correction:** there *is* a diary API, `/api/v1/diary`, described as a general public API for a
+  user's own scripts. It is off unless the NutriTrace server sets `PUBLIC_API_ENABLED` (and
+  `PUBLIC_API_WRITE_ENABLED` to write), and it uses the `mcp:read` / `mcp:write` scopes. It is not
+  on the published Federation API page. Mirroring openGym's diary into it is possible later; not built.
 
-The adapter will be a provider in `api/integrations/` (the webhook's framework): the token sealed per
-profile on the server, outbound requests through `net-guard.js`, the existing outbox for retries.
+#### Connecting (implemented)
+
+1. The openGym admin adds `nutritrace` to `INTEGRATIONS` (for example `INTEGRATIONS=webhook,nutritrace`).
+   A NutriTrace on the home network over plain http also needs `INTEGRATIONS_ALLOW_LAN=1`.
+2. In NutriTrace: Settings → API Tokens, a token with the `read:foods` scope.
+3. In openGym: Settings → Integrations → Extension lab → **NutriTrace foods**: the address and the
+   token, **Connect**, then **Check connection** (calls `/api/v1/me` and checks the scope).
+4. Search, pick a meal, **Add** a food to the diary's day. Foods NutriTrace keeps in cups, pieces or
+   custom units are listed but cannot be added: the diary does not guess a density.
+
+How it is built: a provider in `api/integrations/providers/nutritrace.js` on the webhook's framework.
+The address and token are sealed per profile (`DATA_DIR/integrations/`), the app never gets them
+back, requests go through `net-guard.js` (https, no private addresses unless the admin allows the
+home network, no redirects, 8 s timeout, 512 KB answer cap), one connection a profile, 30 searches a
+minute a profile. Only the search text is sent; the food's image and notes are not passed on. A
+refused token marks the connection *Needs attention*. Route: `GET /api/integrations/nutritrace/foods`.
+
+#### Workouts into NutriTrace (not built)
+
+openGym records no calories for a workout. The plan agreed on 2026-11-13: first check whether
+NutriTrace already gets workout calories from Health Connect or a similar sync (its calories-out
+picks a source at read time, which could double count). Only if it does not: send a workout when it
+has measured calories, with the openGym workout id as `external_id`. No estimates.
 
 ### Optional services and planned integration boundaries
 

@@ -10,6 +10,7 @@ import { trainingVolumeSeries } from '../lib/addon-trends.js'
 import { previewActivityFile } from '../lib/addon-activity.js'
 import { MEALS, addFood, fromLookup } from '../lib/nutrition-diary.js'
 import FoodDiary, { MEAL_LABEL } from '../components/FoodDiary.jsx'
+import NutriTraceCard from '../components/NutriTraceCard.jsx'
 import './addons.css'
 
 const TrendChart = lazy(() => import('../components/AddonTrendChart.jsx'))
@@ -158,7 +159,7 @@ function TrainingInsights({ workouts, unit }) {
 }
 
 const ROADS = [
-  { name: 'NutriTrace food library', status: 'Next', detail: 'The food diary above is built in. Reading your NutriTrace foods needs a per-profile API token, kept on the server.' },
+  { name: 'NutriTrace food library', status: 'Server opt-in', detail: 'Log from your own NutriTrace foods once the server admin adds nutritrace to INTEGRATIONS. Sending workouts to NutriTrace waits on measured calories.' },
   { name: 'Recipes and meal plans', status: 'Not connected', detail: 'Mealie can be connected as a separate recipe service.' },
   { name: 'Advanced progression', status: 'Research', detail: 'Liftosaur rules require an isolated evaluator and verified program behavior.' },
   { name: 'Endurance activities', status: 'Not connected', detail: 'FitTrackee is optional once activity previews prove useful.' },
@@ -202,6 +203,7 @@ export default function Addons() {
       <FoodDiary day={day} setDay={setDay} />
       <TrainingInsights workouts={workouts} unit={S?.unit || 'kg'} />
       <FoodLookup enabled={config?.addons?.nutrition === true} day={day} />
+      {config?.integrations?.providers?.includes('nutritrace') && <NutriTraceCard day={day} />}
       <ActivityPreview />
       <Roadmap />
     </div>
