@@ -25,7 +25,7 @@ test('normalization preserves zero, distinguishes missing nutrition, and does no
   assert.deepEqual(result, {
     barcode: '3017620422003', name: 'Test cereal', brand: 'Sample Co', quantity: '400 g',
     serving: '40 g', grade: 'B',
-    per100: { kcal: 0, proteinG: 9.2, carbohydrateG: 13, fatG: null, sugarG: 2.1 },
+    per100: { kcal: 0, proteinG: 9.2, carbohydrateG: 13, fatG: null, sugarG: 2.1 }, basis: null,
     allergens: ['milk', 'gluten'], source: 'Open Food Facts'
   })
   assert.equal(normalizeOpenFoodFacts({ status: 0 }, '3017620422003'), null)
@@ -75,4 +75,54 @@ test('simultaneous requests for one barcode make one upstream request', async ()
   const [a, b] = await Promise.all([lookup('3017620422003'), lookup('3017620422003')])
   assert.equal(calls, 1)
   assert.deepEqual(a, b)
+})
+
+// The shape API v3.6 really answers (checked live, Nov 2026): `nutriments` is empty and the
+// numbers sit in nutrition.aggregated_set, each with its unit, basis and source.
+const v36 = (nutrients, set = {}) => ({
+  result: { id: 'product_found' },
+  product: { product_name: 'Hazelnut spread', nutriments: {}, nutrition: { aggregated_set: { per: '100g', preparation: 'as_sold', ...set, nutrients } } }
+})
+
+test('API v3.6: nutrients are read from nutrition.aggregated_set, not the empty legacy map', () => {
+  const food = normalizeOpenFoodFacts(v36({
+    'energy-kcal': { source: 'manufacturer', source_per: '100g', unit: 'kcal', value: 539, value_computed: 533.3 },
+    proteins: { source: 'manufacturer', source_per: '100g', unit: 'g', value: 6.3 },
+    carbohydrates: { source: 'packaging', source_per: '100g', unit: 'g', value: 57.5 },
+    fat: { source: 'manufacturer', source_per: '100g', unit: 'g', value: 30.9 },
+    sugars: { source: 'manufacturer', source_per: '100g', unit: 'g', value: 56.3 },
+  }), '3017620422003')
+  assert.deepEqual(food.per100, { kcal: 539, proteinG: 6.3, carbohydrateG: 57.5, fatG: 30.9, sugarG: 56.3 })
+  assert.equal(food.basis, '100g')
+})
+
+test('API v3.6: values Open Food Facts estimated itself are not shown as label values', () => {
+  const food = normalizeOpenFoodFacts(v36({
+    'energy-kcal': { source: 'packaging', unit: 'kcal', value: 44 },
+    proteins: { modifier: '~', source: 'estimate', unit: 'g', value: 0.4 },
+  }), '5449000000996')
+  assert.equal(food.per100.kcal, 44)
+  assert.equal(food.per100.proteinG, null)
+})
+
+test('API v3.6: units are brought to grams and kcal, a kJ-only label becomes kcal, a per-serving set is refused', () => {
+  const food = normalizeOpenFoodFacts(v36({
+    energy: { source: 'packaging', unit: 'kJ', value: 418.4 },
+    proteins: { source: 'packaging', unit: 'mg', value: 1500 },
+    fat: { source: 'packaging', unit: 'g', value: '2' },
+  }, { per: '100ml' }), '5449000000996')
+  assert.deepEqual(food.per100, { kcal: 100, proteinG: 1.5, carbohydrateG: null, fatG: 2, sugarG: null })
+  assert.equal(food.basis, '100ml')
+  const serving = normalizeOpenFoodFacts(v36({ proteins: { source: 'packaging', unit: 'g', value: 9 } }, { per: 'serving' }), '5449000000996')
+  assert.equal(serving.per100.proteinG, null)
+  assert.equal(serving.basis, null)
+})
+
+test('the lookup asks Open Food Facts for the v3.6 nutrition field as well as the legacy one', async () => {
+  let asked = ''
+  const lookup = createFoodLookup({ fetchImpl: async url => { asked = url; return { ok: true, json: async () => v36({}) } } })
+  await lookup('3017620422003')
+  const fields = new URL(asked).searchParams.get('fields').split(',')
+  assert.ok(fields.includes('nutrition'))
+  assert.ok(fields.includes('nutriments'))
 })

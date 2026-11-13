@@ -1,4 +1,4 @@
-# Optional openGym extensions — Soren fork
+# Optional openGym extensions (Soren fork)
 
 This document tracks **implemented functionality**, **verified boundaries**, and **work still required**.
 It is not a claim that every referenced service is installed, licensed, or connected.
@@ -27,7 +27,7 @@ OPEN_FOOD_FACTS_USER_AGENT=openGym-SorenFork/0.1 (https://github.com/sorensadrgi
 
 Recreate the server container with the **fork's source code**: `docker compose up -d --build`. Do not use the upstream prebuilt `ghcr.io/duartesantos8/opengym-api:latest` image for this feature; it does not include the fork changes. Verify `GET /api/config` reports `addons: { nutrition: true }` only to a signed-in session.
 
-All other instances remain unchanged. Requests are strictly 8–14 decimal barcode digits, limited to 12 lookups per minute per signed-in profile, time out after eight seconds, and use a bounded fifteen-minute cache. The lookup is read-only and returns a restricted set of nutritional fields without third-party image URLs.
+All other instances remain unchanged. Requests are strictly 8 to 14 decimal barcode digits, limited to 12 lookups per minute per signed-in profile, time out after eight seconds, and use a bounded fifteen-minute cache. The lookup is read-only and returns a restricted set of nutritional fields without third-party image URLs.
 
 **Open Food Facts rights:** its database uses ODbL, individual contents DbCL, product images CC-BY-SA. Attributions and database terms matter if exporting or reusing its data. Nutrition entries can be incomplete or inaccurate; verify labels. [Official data terms](https://world.openfoodfacts.org/data).
 

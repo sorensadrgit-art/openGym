@@ -17,6 +17,7 @@ vi.mock('../lib/api.js', () => ({
   })
 }))
 vi.mock('react-router-dom', () => ({ useNavigate: () => path => mocks.navs.push(path) }))
+vi.mock('../components/Icon.jsx', () => ({ default: () => null }))
 vi.mock('motion/react', async () => {
   const React = await import('react')
   return { motion: { header: ({ initial, animate, transition, ...rest }) => React.createElement('header', rest) },
@@ -60,5 +61,22 @@ describe('Add-on lab is opt-in and read-only', () => {
     expect(mocks.calls).toEqual(['/api/addons/food?barcode=3017620422003'])
     expect(host.textContent).toContain('Test yogurt')
     expect(host.textContent).toContain('0 kcal')
+  })
+})
+
+describe('Add-on lab navigation and labelling', () => {
+  it('says what the nutrients are per, from the basis the server sends', async () => {
+    mocks.config = { addons: { nutrition: true } }
+    mocks.result = { food: { name: 'Cola', barcode: '5449000000996', per100: { kcal: 44, proteinG: 0, carbohydrateG: 10.9, fatG: 0, sugarG: 10.9 }, basis: '100ml', allergens: [] } }
+    await mount()
+    type(host.querySelector('input[name=barcode]'), '5449000000996')
+    await act(async () => host.querySelector('button[data-lookup]').click())
+    expect(host.querySelector('[data-basis]').textContent).toBe('Values per 100 mL, as the label states.')
+  })
+
+  it('the back button goes up to Settings → Integrations when nothing is behind it', async () => {
+    await mount()
+    await act(async () => host.querySelector('.addons-back').click())
+    expect(mocks.navs).toEqual(['/settings/integrations'])
   })
 })

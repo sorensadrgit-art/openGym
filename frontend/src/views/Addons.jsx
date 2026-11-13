@@ -1,5 +1,7 @@
 import { Suspense, lazy, useMemo, useState } from 'react'
 import { motion, useReducedMotion } from 'motion/react'
+import { useNavigate } from 'react-router-dom'
+import Icon from '../components/Icon.jsx'
 import { useStore } from '../store/useStore.js'
 import { api } from '../lib/api.js'
 import { todayISO } from '../lib/format.js'
@@ -19,6 +21,8 @@ function Metric({ label, value, unit }) {
   </div>
 }
 
+const BASIS = { '100g': 'Values per 100 g, as the label states.', '100ml': 'Values per 100 mL, as the label states.' }
+
 function FoodLookup({ enabled }) {
   const [barcode, setBarcode] = useState('')
   const [food, setFood] = useState(null)
@@ -28,7 +32,7 @@ function FoodLookup({ enabled }) {
     ev.preventDefault()
     if (!enabled || loading) return
     const code = barcode.trim()
-    if (!/^\d{8,14}$/.test(code)) { setFood(null); setError('Enter an 8–14 digit barcode.'); return }
+    if (!/^\d{8,14}$/.test(code)) { setFood(null); setError('Enter a barcode of 8 to 14 digits.'); return }
     setLoading(true); setFood(null); setError('')
     try {
       const response = await api('/api/addons/food?barcode=' + encodeURIComponent(code))
@@ -63,6 +67,7 @@ function FoodLookup({ enabled }) {
         <Metric label="Carbs" value={food.per100?.carbohydrateG} unit="g" />
         <Metric label="Fat" value={food.per100?.fatG} unit="g" />
       </div>
+      <p className="addon-footnote" data-basis>{BASIS[food.basis] || 'Per 100 g or mL, as the label states.'}</p>
       {food.allergens?.length > 0 && <p>Reported allergens: {food.allergens.join(', ')}</p>}
       <p className="addon-footnote">Source: Open Food Facts (ODbL database). Product data may be incomplete. Not a food diary entry.</p>
     </div>}
@@ -100,7 +105,7 @@ function ActivityPreview() {
         <Metric label="Duration" value={result.durationMinutes} unit="min" />
       </div>
     </div>}
-    <p className="addon-footnote">Activity preview only — the file stays on your device. This does not import into workout history.</p>
+    <p className="addon-footnote">Activity preview only: the file stays on your device. This does not import into workout history.</p>
   </section>
 }
 
@@ -152,8 +157,12 @@ export default function Addons() {
   const S = useStore(s => s.S)
   const config = useStore(s => s.config)
   const reduceMotion = useReducedMotion()
+  const nav = useNavigate()
+  // Back the way you came when there is a way, else up to where the Lab is listed (Settings).
+  const back = () => ((window.history.state?.idx || 0) > 0 ? nav(-1) : nav('/settings/integrations', { replace: true }))
   const workouts = Array.isArray(S?.workouts) ? S.workouts : []
   return <main className="addons-page">
+    <button type="button" className="sp-back addons-back" onClick={back}><Icon name="chevronLeft" /><span>Integrations</span></button>
     <motion.header className="addons-hero" initial={reduceMotion ? false : { opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.26 }}>
       <span className="addon-kicker">OPENGYM / EXTENSION LAB</span>

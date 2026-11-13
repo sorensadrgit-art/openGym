@@ -266,7 +266,31 @@ paths:
                 properties:
                   food:
                     type: object
-                    description: Product name, barcode, brand, nutrients, and reported allergens.
+                    description: |
+                      Product name, barcode, brand, nutrients, and reported allergens. Nutrients
+                      come from the label as Open Food Facts records it; values Open Food Facts
+                      estimated itself are left out (`null`), as is a set stated per serving.
+                    properties:
+                      barcode: { type: string }
+                      name: { type: string }
+                      brand: { type: string }
+                      quantity: { type: string }
+                      serving: { type: string }
+                      grade: { type: [string, 'null'], enum: [A, B, C, D, E, null] }
+                      per100:
+                        type: object
+                        properties:
+                          kcal: { type: [number, 'null'] }
+                          proteinG: { type: [number, 'null'] }
+                          carbohydrateG: { type: [number, 'null'] }
+                          fatG: { type: [number, 'null'] }
+                          sugarG: { type: [number, 'null'] }
+                      basis:
+                        type: [string, 'null']
+                        enum: ['100g', '100ml', null]
+                        description: What `per100` is per, when the record says; `null` for a legacy record.
+                      allergens: { type: array, items: { type: string } }
+                      source: { type: string, const: Open Food Facts }
         '400': { description: Invalid barcode format }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { description: Add-on not enabled or barcode not found }
