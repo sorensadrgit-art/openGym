@@ -4,11 +4,20 @@ import { createRoot } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true
-const mocks = vi.hoisted(() => ({ config: {}, result: null, calls: [], navs: [] }))
-vi.mock('../store/useStore.js', () => {
-  const useStore = selector => selector({ S: { workouts: [], unit: 'kg' }, config: mocks.config })
+const mocks = vi.hoisted(() => ({ config: {}, result: null, calls: [], navs: [], S: null }))
+vi.mock('../store/useStore.js', async () => {
+  const React = await import('react')
+  // A working store: update() runs the mutator on a copy and re-renders, like the real one.
+  let listeners = new Set()
+  const update = mut => { const S = structuredClone(mocks.S); mut(S); mocks.S = S; listeners.forEach(f => f()) }
+  const useStore = selector => {
+    const [, tick] = React.useReducer(x => x + 1, 0)
+    React.useEffect(() => { listeners.add(tick); return () => listeners.delete(tick) }, [])
+    return selector({ S: mocks.S, config: mocks.config, update })
+  }
   return { useStore }
 })
+vi.mock('../store/useUI.js', () => ({ useUI: selector => selector({ toast: () => {} }) }))
 vi.mock('../lib/api.js', () => ({
   api: vi.fn(async url => {
     mocks.calls.push(url)
@@ -27,7 +36,7 @@ import Addons from './Addons.jsx'
 
 let host, root
 beforeEach(() => {
-  Object.assign(mocks, { config: {}, result: null, calls: [], navs: [] })
+  Object.assign(mocks, { config: {}, result: null, calls: [], navs: [], S: { workouts: [], unit: 'kg' } })
   host = document.createElement('div'); document.body.append(host); root = createRoot(host)
 })
 afterEach(() => { act(() => root.unmount()); host.remove() })
@@ -78,5 +87,23 @@ describe('Add-on lab navigation and labelling', () => {
     await mount()
     await act(async () => host.querySelector('.addons-back').click())
     expect(mocks.navs).toEqual(['/settings/integrations'])
+  })
+})
+
+describe('a looked-up product goes into the diary', () => {
+  it('logs the amount eaten, at the meal picked, with its source', async () => {
+    mocks.config = { addons: { nutrition: true } }
+    mocks.result = { food: { name: 'Nutella', barcode: '3017620422003', brand: 'Ferrero', basis: '100g',
+      per100: { kcal: 539, proteinG: 6.3, carbohydrateG: 57.5, fatG: 30.9, sugarG: 56.3 }, allergens: [] } }
+    await mount()
+    type(host.querySelector('input[name=barcode]'), '3017620422003')
+    await act(async () => host.querySelector('button[data-lookup]').click())
+    type(host.querySelector('input[name=log-amount]'), '15')
+    await act(async () => host.querySelector('button[data-log-lookup]').click())
+    const entries = Object.values(mocks.S.foodLog)
+    expect(entries).toHaveLength(1)
+    expect(entries[0]).toMatchObject({ name: 'Nutella', amount: 15, basis: 'g', meal: 'snack', src: { kind: 'off', code: '3017620422003' } })
+    expect(host.querySelector('.diary').textContent).toContain('81 kcal')
+    expect(host.textContent).toContain('Logged 15 g of Nutella to snacks.')
   })
 })

@@ -10,7 +10,8 @@ The **Extension Lab** is reached through Settings → Integrations → Extension
 | Feature | Actual behavior | Privacy / readiness |
 | --- | --- | --- |
 | Training-volume charts | Existing workout data, grouped by workout date and displayed using ECharts | Local read-only analytics; no fabricated workouts, charts load only when opened |
-| Food product lookup | User enters a GTIN barcode; the authenticated server retrieves fields from the official Open Food Facts API | **Off by default**; sends the barcode only when explicitly submitted; no workout/user history transmitted |
+| Food diary | Log foods per day and meal, by hand or from a barcode lookup; day totals of energy, protein, carbs and fat; previous days; remove with Undo | Stored in the profile (`S.foodLog`) and synced like workouts; nothing is sent to a third party. Values the label does not give stay empty and the totals say so |
+| Food product lookup | User enters a GTIN barcode; the authenticated server retrieves fields from the official Open Food Facts API (v3.6 `nutrition.aggregated_set`, legacy `nutriments` as fallback) | **Off by default**; sends the barcode only when explicitly submitted; no workout/user history transmitted. Label values only: values Open Food Facts estimated itself are left out |
 | GPX, TCX, FIT activity preview | Browser reads a selected local file with sports-lib and shows distance and duration | File remains on the device and **is not yet imported or synced** to openGym's history |
 | Transition animations | Motion is loaded with the optional lab; reduced-motion preference respected | No app-wide navigation changes |
 
@@ -40,6 +41,62 @@ npm test && npm run build
 ```
 
 The activity preview currently supports files <=15 MiB and displays a summary only. **It does not write to openGym's existing workout collection.** Integrating imported activities requires an explicit conversion model, deduplication, permissions, and device-to-server synchronization tests.
+
+### Food diary: how it is stored and synced
+
+`S.foodLog` is a map of entries keyed by id: `{ d, meal, name, brand?, amount, basis, per100, src, _ts }`.
+`amount` is in `basis` (`g` or `ml`); `per100` holds `kcal`, `proteinG`, `carbohydrateG`, `fatG` per
+100 of that basis, each a number or `null`. `src` is `{ kind: 'off', code }` or `{ kind: 'manual' }`.
+
+It is one of the stamped maps of `frontend/src/lib/sync-merge.js` and `api/sync-stamps.js`
+(`STAMPED_MAPS`, kept equal by a parity test), the mechanism `dayPhotos` already uses: two devices
+logging different foods keep both, of an entry both edited the later edit wins, and a removal is a
+stamped empty entry (`{ _ts }`) so the other device's copy cannot bring it back. "Reset everything"
+clears it. The rules live in `frontend/src/lib/nutrition-diary.js` with its tests beside it.
+
+Known limit: removed entries stay as small tombstones, like removed day photos. Years of daily logging
+will grow the profile document (roughly 250 bytes an entry); pruning old tombstones needs its own
+sync-safe design before it is added.
+
+### Status checklist (updated 2026-11-13)
+
+Labels: **Done** (built, tested, checked in a browser), **Pending** (not started), **Blocked** (needs
+something named).
+
+| # | Phase | Status | What is true now |
+|---|---|---|---|
+| 0 | Extension Lab foundation | **Done** | Fixed: Open Food Facts v3.6 moved nutrients, every live lookup came back empty. Back button, label basis. |
+| 1 | Nutrition diary | **Done** | Built into openGym (above), not a separate service. |
+| 1b | NutriTrace adapter | Pending | See "NutriTrace" below. Needs a decision on calories before the workout push. |
+| 2 | Mealie recipes and meal plans | Pending | Needs a Mealie instance and API token to build and test against. |
+| 3 | Liftosaur programming | Pending | Liftosaur's licence and Liftoscript evaluator to be reviewed; openGym's own progression engine stays. |
+| 4 | MediaPipe pose estimation | Pending | Apache-2.0; on-device only, camera permission, rep counting needs real video to validate. |
+| 5 | Capacitor Bluetooth LE | Blocked | Needs physical heart-rate or sensor hardware and Android/iOS device builds. |
+| 6 | FitTrackee | Pending | Needs a FitTrackee instance; the activity preview is the import path's first half. |
+| 7 | 3D anatomy (Three.js, R3F, Drei) | Blocked | The libraries are MIT; a licensed anatomy model is the blocker (BodyParts3D is CC-BY-SA 2.1 JP). |
+| 8 | Node-RED | Pending | Already works through openGym's signed webhooks (docs/INTEGRATIONS.md); an example flow that checks the signature is the remaining piece. |
+| 9 | LangGraph.js | Pending | Only where the existing Coach pipeline shows a gap. |
+| 10 | Ollama | Pending | The Coach already speaks to OpenAI-compatible endpoints; verify against a local Ollama and document. |
+
+### NutriTrace
+
+[NutriTrace](https://github.com/TraceApps/nutritrace) (AGPL-3.0, Svelte + Express + SQLite) offers a
+Federation API at `/api/v1` with bearer tokens (`nt_pat_…`, minted in its Settings → API Tokens) and
+scopes. What its [reference](https://traceapps.github.io/docs/nutritrace/federation-api/) documents,
+checked 2026-11-13:
+
+- `GET /api/v1/foods` (`read:foods`): the token owner's food library, `nutrition` with `kcal`,
+  `protein_g`, `carbs_g`, `fat_g`. This maps onto the diary's `per100` and is the planned adapter.
+- `POST /api/v1/workouts` (`write:workouts`) and `POST /api/v1/activity` (`write:activity`): both
+  **require** calories (`calories_burned` / `kcal`), idempotent by `external_id`.
+- No endpoint writes diary entries, so the diary itself cannot be mirrored into NutriTrace.
+
+openGym records no calories for a workout. Pushing workouts to NutriTrace therefore needs either a
+measured value (from a watch through Apple Health or Health Connect) or a labelled estimate
+(MET × body weight × duration). That is a product decision and is not built.
+
+The adapter will be a provider in `api/integrations/` (the webhook's framework): the token sealed per
+profile on the server, outbound requests through `net-guard.js`, the existing outbox for retries.
 
 ### Optional services and planned integration boundaries
 

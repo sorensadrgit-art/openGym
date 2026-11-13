@@ -8,6 +8,8 @@ import { todayISO } from '../lib/format.js'
 import { workoutDay, workoutVolume } from '../lib/history.js'
 import { trainingVolumeSeries } from '../lib/addon-trends.js'
 import { previewActivityFile } from '../lib/addon-activity.js'
+import { MEALS, addFood, fromLookup } from '../lib/nutrition-diary.js'
+import FoodDiary, { MEAL_LABEL } from '../components/FoodDiary.jsx'
 import './addons.css'
 
 const TrendChart = lazy(() => import('../components/AddonTrendChart.jsx'))
@@ -23,7 +25,32 @@ function Metric({ label, value, unit }) {
 
 const BASIS = { '100g': 'Values per 100 g, as the label states.', '100ml': 'Values per 100 mL, as the label states.' }
 
-function FoodLookup({ enabled }) {
+// After a lookup: how much of it, at which meal, into the diary's day.
+function LogFromLookup({ food, day }) {
+  const update = useStore(s => s.update)
+  const [amount, setAmount] = useState('100')
+  const [meal, setMeal] = useState('snack')
+  const [state, setState] = useState({ done: false, error: '' })
+  const unit = food.basis === '100ml' ? 'mL' : 'g'
+  const log = ev => {
+    ev.preventDefault()
+    try {
+      update(s => { addFood(s, fromLookup(food, { d: day, meal, amount: amount === '' ? NaN : Number(amount) })) })
+      setState({ done: true, error: '' })
+    } catch (err) { setState({ done: false, error: err?.message || 'Could not log this food' }) }
+  }
+  if (state.done) return <p className="diary-logged" role="status">Logged {amount} {unit} of {food.name} to {MEAL_LABEL[meal].toLowerCase()}.</p>
+  return <form className="diary-quick" onSubmit={log} aria-label="Add to food diary">
+    <label className="diary-field"><span>Amount ({unit})</span>
+      <input name="log-amount" type="text" inputMode="decimal" value={amount} onChange={e => { setAmount(e.target.value); setState({ done: false, error: '' }) }} /></label>
+    <label className="diary-field"><span>Meal</span>
+      <select name="log-meal" value={meal} onChange={e => setMeal(e.target.value)}>{MEALS.map(m => <option key={m} value={m}>{MEAL_LABEL[m]}</option>)}</select></label>
+    <button type="submit" className="diary-primary" data-log-lookup>Add to diary</button>
+    {state.error && <p className="addon-error" role="alert">{state.error}</p>}
+  </form>
+}
+
+function FoodLookup({ enabled, day }) {
   const [barcode, setBarcode] = useState('')
   const [food, setFood] = useState(null)
   const [error, setError] = useState('')
@@ -69,7 +96,8 @@ function FoodLookup({ enabled }) {
       </div>
       <p className="addon-footnote" data-basis>{BASIS[food.basis] || 'Per 100 g or mL, as the label states.'}</p>
       {food.allergens?.length > 0 && <p>Reported allergens: {food.allergens.join(', ')}</p>}
-      <p className="addon-footnote">Source: Open Food Facts (ODbL database). Product data may be incomplete. Not a food diary entry.</p>
+      <LogFromLookup key={food.barcode} food={food} day={day} />
+      <p className="addon-footnote">Source: Open Food Facts (ODbL database). Product data may be incomplete; check the label.</p>
     </div>}
     <p className="addon-footnote">Nothing is sent on page load. Only the barcode you submit is looked up; no workout history is shared.</p>
   </section>
@@ -130,7 +158,7 @@ function TrainingInsights({ workouts, unit }) {
 }
 
 const ROADS = [
-  { name: 'Nutrition journal', status: 'Evaluation', detail: 'NutriTrace needs a reviewed, authenticated API adapter before syncing food entries.' },
+  { name: 'NutriTrace food library', status: 'Next', detail: 'The food diary above is built in. Reading your NutriTrace foods needs a per-profile API token, kept on the server.' },
   { name: 'Recipes and meal plans', status: 'Not connected', detail: 'Mealie can be connected as a separate recipe service.' },
   { name: 'Advanced progression', status: 'Research', detail: 'Liftosaur rules require an isolated evaluator and verified program behavior.' },
   { name: 'Endurance activities', status: 'Not connected', detail: 'FitTrackee is optional once activity previews prove useful.' },
@@ -161,6 +189,7 @@ export default function Addons() {
   // Back the way you came when there is a way, else up to where the Lab is listed (Settings).
   const back = () => ((window.history.state?.idx || 0) > 0 ? nav(-1) : nav('/settings/integrations', { replace: true }))
   const workouts = Array.isArray(S?.workouts) ? S.workouts : []
+  const [day, setDay] = useState(todayISO)
   return <main className="addons-page">
     <button type="button" className="sp-back addons-back" data-back="/settings/integrations" onClick={back}><Icon name="chevronLeft" /><span>Integrations</span></button>
     <motion.header className="addons-hero" initial={reduceMotion ? false : { opacity: 0, y: 10 }}
@@ -170,8 +199,9 @@ export default function Addons() {
       <p>Optional, isolated additions to the tracker. Existing workout records are not changed here.</p>
     </motion.header>
     <div className="addons-layout">
+      <FoodDiary day={day} setDay={setDay} />
       <TrainingInsights workouts={workouts} unit={S?.unit || 'kg'} />
-      <FoodLookup enabled={config?.addons?.nutrition === true} />
+      <FoodLookup enabled={config?.addons?.nutrition === true} day={day} />
       <ActivityPreview />
       <Roadmap />
     </div>
