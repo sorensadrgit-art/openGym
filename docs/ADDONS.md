@@ -61,21 +61,25 @@ sync-safe design before it is added.
 ### Status checklist (updated 2026-11-13)
 
 Labels: **Done** (built, tested, checked in a browser), **Pending** (not started), **Blocked** (needs
-something named).
+something named), **Out of scope** (excluded by a decision).
+
+CI: `.github/workflows/test.yml` runs the frontend, api and Node-RED jobs on pull requests. GitHub
+Actions has never run on this fork: it has to be enabled in the fork's **Actions** tab first.
+Upstream-only jobs (image publishing, Pages, the iOS build, the CLA bot) skip on forks.
 
 | # | Phase | Status | What is true now |
 |---|---|---|---|
 | 0 | Extension Lab foundation | **Done** | Fixed: Open Food Facts v3.6 moved nutrients, every live lookup came back empty. Back button, label basis. |
 | 1 | Nutrition diary | **Done** | Built into openGym (above), not a separate service. |
-| 1b | NutriTrace food library (read) | **Done** | Server opt-in (`INTEGRATIONS=…,nutritrace`); per-profile token sealed on the server; search and log from the Lab. Checked against NutriTrace's source; not yet against a running instance. |
+| 1b | NutriTrace food library (read) | **Done** | Server opt-in (`INTEGRATIONS=…,nutritrace`); per-profile token sealed on the server; search and log from the Lab. Hardened: transient errors do not flag the connection, implausible values and malformed answers are refused, SSRF and profile-isolation tests against a real `server.js`. Checked against NutriTrace's source and a stand-in built from it; **not yet against a running instance**. |
 | 1c | NutriTrace workout push | Pending | Waits on measured calories (see below). |
-| 2 | Mealie recipes and meal plans | Pending | Needs a Mealie instance and API token to build and test against. |
+| 2 | Mealie recipes and meal plans | Spec only | [docs/dev/mealie-integration.md](dev/mealie-integration.md), from Mealie's source. Building needs a test instance, and a `serving` basis in the diary (Mealie has no serving weight). |
 | 3 | Liftosaur programming | Pending | Liftosaur's licence and Liftoscript evaluator to be reviewed; openGym's own progression engine stays. |
 | 4 | MediaPipe pose estimation | Pending | Apache-2.0; on-device only, camera permission, rep counting needs real video to validate. |
-| 5 | Capacitor Bluetooth LE | Blocked | Needs physical heart-rate or sensor hardware and Android/iOS device builds. |
+| 5 | Capacitor Bluetooth LE | Out of scope | openGym in this fork is a web app (decision 2026-11-13: no native or mobile app work). The browser's Web Bluetooth API is the web route; it works in Chromium browsers only and still needs real sensor hardware to test. |
 | 6 | FitTrackee | Pending | Needs a FitTrackee instance; the activity preview is the import path's first half. |
 | 7 | 3D anatomy (Three.js, R3F, Drei) | Blocked | The libraries are MIT; a licensed anatomy model is the blocker (BodyParts3D is CC-BY-SA 2.1 JP). |
-| 8 | Node-RED | Pending | Already works through openGym's signed webhooks (docs/INTEGRATIONS.md); an example flow that checks the signature is the remaining piece. |
+| 8 | Node-RED | **Done** | [contrib/node-red](../contrib/node-red/README.md): importable flow that checks openGym's webhook signature over the raw bytes, the time window, replays and size. Tested on a real Node-RED 5.0.9 in CI. |
 | 9 | LangGraph.js | Pending | Only where the existing Coach pipeline shows a gap. |
 | 10 | Ollama | Pending | The Coach already speaks to OpenAI-compatible endpoints; verify against a local Ollama and document. |
 
