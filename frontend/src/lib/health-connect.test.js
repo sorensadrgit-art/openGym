@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest'
-import { readFileSync } from 'node:fs'
 import { EXIDX } from './exercises.js'
 import { exerciseType, goneIds, healthRecords, planSync, plannedType, recordKey, sessionRecord, sessionType, SESSION_TYPES, TEXT_MAX, weightRecord, writtenIds } from './health-connect.js'
 
@@ -71,21 +70,6 @@ describe('sessionType', () => {
   it('only ever answers a type the native side knows', () => {
     for (const w of [workout([]), workout([strength]), workout([treadmill]), workout([bike, treadmill])]) {
       expect(SESSION_TYPES).toContain(sessionType(w))
-    }
-  })
-})
-
-// Each name has its own type on the native side; a name it does not know is filed as "other".
-describe('the native tables', () => {
-  const src = f => readFileSync(new URL(f, import.meta.url), 'utf8')
-  it.each([['../../ios/App/App/AppleHealthPlugin.swift'], ['../../ios/App/Watch/WorkoutManager.swift']])('%s knows every type', f => {
-    const s = src(f)
-    for (const name of SESSION_TYPES) expect(s).toContain(`"${name}": .`)
-  })
-  it('Health Connect knows every type it has a constant for', () => {
-    const s = src('../../android/app/src/main/java/ch/duartesantos/opengym/HealthConnectPlugin.java')
-    for (const name of SESSION_TYPES.filter(n => !['jump_rope', 'mixed_cardio', 'other_workout'].includes(n))) {
-      expect(s).toContain(`case "${name}": return`)
     }
   })
 })
