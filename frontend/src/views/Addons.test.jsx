@@ -4,7 +4,7 @@ import { createRoot } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true
-const mocks = vi.hoisted(() => ({ config: {}, result: null, calls: [], navs: [], S: null }))
+const mocks = vi.hoisted(() => ({ config: {}, result: null, calls: [], navs: [], S: null, user: null }))
 vi.mock('../store/useStore.js', async () => {
   const React = await import('react')
   // A working store: update() runs the mutator on a copy and re-renders, like the real one.
@@ -13,7 +13,7 @@ vi.mock('../store/useStore.js', async () => {
   const useStore = selector => {
     const [, tick] = React.useReducer(x => x + 1, 0)
     React.useEffect(() => { listeners.add(tick); return () => listeners.delete(tick) }, [])
-    return selector({ S: mocks.S, config: mocks.config, update })
+    return selector({ S: mocks.S, config: mocks.config, user: mocks.user, update })
   }
   return { useStore }
 })
@@ -36,7 +36,7 @@ import Addons from './Addons.jsx'
 
 let host, root
 beforeEach(() => {
-  Object.assign(mocks, { config: {}, result: null, calls: [], navs: [], S: { workouts: [], unit: 'kg' } })
+  Object.assign(mocks, { config: {}, result: null, calls: [], navs: [], S: { workouts: [], unit: 'kg' }, user: { id: 'u1' } })
   host = document.createElement('div'); document.body.append(host); root = createRoot(host)
 })
 afterEach(() => { act(() => root.unmount()); host.remove() })
@@ -105,5 +105,32 @@ describe('a looked-up product goes into the diary', () => {
     expect(entries[0]).toMatchObject({ name: 'Nutella', amount: 15, basis: 'g', meal: 'snack', src: { kind: 'off', code: '3017620422003' } })
     expect(host.querySelector('.diary').textContent).toContain('81 kcal')
     expect(host.textContent).toContain('Logged 15 g of Nutella to snacks.')
+  })
+})
+
+describe('the training-volume card counts volume the way the rest of the app does', () => {
+  it('uses the logged sets (sessionVolume), not a cached total that went stale', async () => {
+    const now = new Date()
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+    // 3 x 100 kg = 300 kg from the sets; the cached `vol` (999) is from before an edit.
+    mocks.S = { unit: 'kg', workouts: [{ id: 'w1', d: today, start: 1, vol: 999,
+      entries: [{ id: '0025', sets: [{ w: 100, r: 3, done: true }] }] }] }
+    await mount()
+    const card = host.querySelector('.addon-trends')
+    expect(card.textContent).toContain('300 kg of recorded training volume')
+    expect(card.textContent).not.toContain('999')
+  })
+})
+
+describe('after sign-out', () => {
+  // Signing out clears the user but keeps the server config the signed-in session fetched, so the
+  // signed-in-only add-ons must check the user, not the config alone (the API would answer 401).
+  it('a guest gets neither the nutrition lookup nor the NutriTrace card, whatever config says', async () => {
+    mocks.user = null
+    mocks.config = { addons: { nutrition: true }, integrations: { providers: ['nutritrace'] } }
+    await mount()
+    expect(host.querySelector('button[data-lookup]').disabled).toBe(true)
+    expect(host.querySelector('section[aria-labelledby=nt-title]')).toBe(null)
+    expect(mocks.calls).toEqual([])
   })
 })

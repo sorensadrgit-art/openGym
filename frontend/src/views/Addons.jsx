@@ -5,7 +5,7 @@ import Icon from '../components/Icon.jsx'
 import { useStore } from '../store/useStore.js'
 import { api } from '../lib/api.js'
 import { todayISO } from '../lib/format.js'
-import { workoutDay, workoutVolume } from '../lib/history.js'
+import { workoutDay, sessionVolume } from '../lib/history.js'
 import { trainingVolumeSeries } from '../lib/addon-trends.js'
 import { previewActivityFile } from '../lib/addon-activity.js'
 import { MEALS, addFood, fromLookup } from '../lib/nutrition-diary.js'
@@ -138,13 +138,12 @@ function ActivityPreview() {
   </section>
 }
 
-function TrainingInsights({ workouts, unit }) {
+function TrainingInsights({ S, workouts, unit }) {
+  // The same volume as Stats and the heatmap: from the logged sets, with the profile's warm-up and
+  // bodyweight settings (sessionVolume), not a cached total that may predate an edit.
   const rows = useMemo(() => trainingVolumeSeries(workouts, {
-    end: todayISO(), days: 14, dayOf: workoutDay, volumeOf: w => {
-      const v = Number(w?.vol)
-      return Number.isFinite(v) && v >= 0 ? v : workoutVolume(w)
-    }
-  }), [workouts])
+    end: todayISO(), days: 14, dayOf: workoutDay, volumeOf: w => sessionVolume(w, S)
+  }), [workouts, S])
   const total = rows.reduce((sum, row) => sum + row.volume, 0)
   return <section className="addon-card addon-trends" aria-labelledby="addon-trends-title">
     <div className="addon-headline"><div>
@@ -185,6 +184,9 @@ function Roadmap() {
 export default function Addons() {
   const S = useStore(s => s.S)
   const config = useStore(s => s.config)
+  // Signing out keeps the config the session fetched; these two need a signed-in profile (the api
+  // answers 401 otherwise), so they follow the user, not the config alone.
+  const signedIn = !!useStore(s => s.user)
   const reduceMotion = useReducedMotion()
   const nav = useNavigate()
   // Back the way you came when there is a way, else up to where the Lab is listed (Settings).
@@ -201,9 +203,9 @@ export default function Addons() {
     </motion.header>
     <div className="addons-layout">
       <FoodDiary day={day} setDay={setDay} />
-      <TrainingInsights workouts={workouts} unit={S?.unit || 'kg'} />
-      <FoodLookup enabled={config?.addons?.nutrition === true} day={day} />
-      {config?.integrations?.providers?.includes('nutritrace') && <NutriTraceCard day={day} />}
+      <TrainingInsights S={S} workouts={workouts} unit={S?.unit || 'kg'} />
+      <FoodLookup enabled={signedIn && config?.addons?.nutrition === true} day={day} />
+      {signedIn && config?.integrations?.providers?.includes('nutritrace') && <NutriTraceCard day={day} />}
       <ActivityPreview />
       <Roadmap />
     </div>
