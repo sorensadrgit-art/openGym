@@ -58,6 +58,8 @@ const cases = [
   ['valid workout.finished', () => post(b1, signature(SECRET, b1)), 200, /"handled":"workout.finished"/],
   ['same delivery again (openGym retry, new t)', () => post(b1, signature(SECRET, b1, T + 2)), 200, /"duplicate":true/],
   ['valid weighin.logged', () => { const b = body('evt_e2e_2', 'weighin.logged'); return post(b, signature(SECRET, b)) }, 200, /"handled":"weighin.logged"/],
+  // A type openGym may add later: acknowledged (a 4xx would be a final failure there), never handled.
+  ['authentic but unknown event type: 200, not handled', () => { const b = JSON.stringify({ ...JSON.parse(body('evt_e2e_future')), type: 'workout.deleted' }); return post(b, signature(SECRET, b)) }, 200, /^\{"ok":true,"ignored":true\}$/],
   ['tampered body', () => post(tampered, signature(SECRET, b1)), 401, /unauthorized/],
   ['wrong secret', () => post(body('evt_e2e_3'), signature(newSecret(), body('evt_e2e_3'))), 401, /unauthorized/],
   ['stale timestamp (10 min)', () => post(body('evt_e2e_4'), signature(SECRET, body('evt_e2e_4'), T - 600)), 401, /unauthorized/],

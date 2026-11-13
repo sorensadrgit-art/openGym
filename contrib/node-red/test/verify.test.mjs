@@ -90,7 +90,8 @@ test('nothing is parsed before the signature passes; a signed body must be a ver
   assert.equal(check(delivery({ body: 'not json' })).status, 400)
   assert.equal(check(delivery({ body: '[1,2]' })).status, 400)
   assert.equal(check(delivery({ body: JSON.stringify({ ...event(), version: 2 }) })).status, 400)
-  assert.equal(check(delivery({ body: JSON.stringify({ ...event(), type: 'account.deleted' }) })).status, 400)
+  assert.equal(check(delivery({ body: JSON.stringify({ ...event(), type: 42 }) })).status, 400)
+  assert.equal(check(delivery({ body: JSON.stringify({ ...event(), type: 'x'.repeat(65) }) })).status, 400)
   assert.equal(check(delivery({ body: JSON.stringify({ ...event(), id: 'x'.repeat(101) }) })).status, 400)
   assert.equal(check(delivery({ body: JSON.stringify({ ...event(), id: 42 }) })).status, 400)
 })
@@ -150,4 +151,21 @@ test('sign-example.mjs prints requests the verifier judges as their comments say
   assert.equal(reqs.length, 3)
   const now = Date.now()
   assert.deepEqual(reqs.map(r => verifyOpenGymWebhook({ ...r, secret: SECRET, crypto, seen: {}, now }).status), [200, 401, 401])
+})
+
+// openGym answers a non-retryable 4xx with a final failure (providers/webhook.js judge), so a 400
+// for an event type this flow does not know yet would break the webhook the day openGym adds one.
+test('an authentic delivery of an event type this flow does not know is acknowledged, not handled, and still deduplicated', () => {
+  const seen = {}
+  const body = JSON.stringify({ ...event(), type: 'workout.deleted', id: 'evt_future' })
+  const first = check(delivery({ body }), { seen })
+  assert.equal(first.ok, true)
+  assert.equal(first.status, 200)
+  assert.equal(first.ignored, true)
+  assert.equal(first.envelope, undefined, 'nothing to hand to the handler')
+  assert.deepEqual(publicBody(first), { ok: true, ignored: true })
+  const again = check(delivery({ body }), { seen })
+  assert.equal(again.duplicate, true)
+  // Authenticity still comes first: the same unknown type, unsigned or tampered, is a 401.
+  assert.equal(check(delivery({ body, header: 't=1,v1=' + '0'.repeat(64) })).status, 401)
 })

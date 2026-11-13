@@ -37,7 +37,9 @@ function seenAdd(store, id, expiresMs, nowMs, max) {
  * opts: { rawBody: Buffer, headers: { lower-case names }, secret, crypto, seen: object,
  *         now: ms, toleranceSec: 300, maxBytes: 65536, maxSeen: 10000 }
  * Answers { ok: true, status: 200, envelope } for a new, authentic delivery,
- *         { ok: true, status: 200, duplicate: true, id } for one already seen, or
+ *         { ok: true, status: 200, duplicate: true, id } for one already seen,
+ *         { ok: true, status: 200, ignored: true, id, type } for an authentic one of a type this
+ *         flow does not handle, or
  *         { ok: false, status, reason } where `reason` is for your own log only.
  * Every refusal has one public body per status (publicBody), so nothing about the secret, the
  * expected signature or which check failed is sent back.
@@ -76,19 +78,23 @@ function verifyOpenGymWebhook(opts) {
   if (!envelope || typeof envelope !== 'object' || Array.isArray(envelope)) return { ok: false, status: 400, reason: 'signed body is not an object' };
   if (envelope.version !== 1) return { ok: false, status: 400, reason: 'unsupported payload version' };
   if (typeof envelope.id !== 'string' || !envelope.id || envelope.id.length > 100) return { ok: false, status: 400, reason: 'missing or invalid delivery id' };
-  if (OPENGYM_EVENTS.indexOf(envelope.type) === -1) return { ok: false, status: 400, reason: 'unknown event type' };
+  if (typeof envelope.type !== 'string' || !envelope.type || envelope.type.length > 64) return { ok: false, status: 400, reason: 'missing or invalid event type' };
 
   // Replay: the signed id, remembered for twice the window (a copy older than the window already
   // fails the timestamp check above). openGym's own retries carry the same id and get the 200.
   var seen = opts.seen || {};
   if (seenHas(seen, envelope.id, nowMs)) return { ok: true, status: 200, duplicate: true, id: envelope.id };
   seenAdd(seen, envelope.id, nowMs + 2 * tolerance * 1000, nowMs, maxSeen);
+  // Authentic, but a type this flow does not handle (one openGym added later): acknowledge it with
+  // a 200. A 4xx would be a final failure in openGym and mark the webhook for attention.
+  if (OPENGYM_EVENTS.indexOf(envelope.type) === -1) return { ok: true, status: 200, ignored: true, id: envelope.id, type: envelope.type };
   return { ok: true, status: 200, envelope: envelope };
 }
 
 /** What the sender sees: one fixed body per status, nothing derived from the request. */
 function publicBody(result) {
   if (result.duplicate) return { ok: true, duplicate: true };
+  if (result.ignored) return { ok: true, ignored: true };
   if (result.ok) return { ok: true };
   if (result.status === 413) return { error: 'payload too large' };
   if (result.status === 401) return { error: 'unauthorized' };

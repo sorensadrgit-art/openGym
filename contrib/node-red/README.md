@@ -58,7 +58,10 @@ Optional environment variables:
 4. `t` is within the tolerance of Node-RED's clock, either way. Otherwise 401.
 5. HMAC-SHA256 of `"<t>." + raw body` with the secret equals `v1`, compared with
    `crypto.timingSafeEqual`. Otherwise 401.
-6. Only now the body is parsed: JSON, `version` 1, a string `id`, a type openGym sends. Otherwise 400.
+6. Only now the body is parsed: JSON, `version` 1, a string `id`, a string `type`. Otherwise 400.
+   An authentic event of a type this flow does not handle yet (one openGym adds later) gets a
+   200 `{"ok":true,"ignored":true}` and goes nowhere: a 400 would be a final failure in openGym
+   and mark the webhook *Needs attention*.
 7. The `id` from the signed body has not been seen in the last twice-the-tolerance. If it has: 200
    `{"ok":true,"duplicate":true}` and nothing runs.
 
@@ -74,6 +77,7 @@ openGym reads the status code (`api/integrations/providers/webhook.js`):
 |---|---|---|
 | 200 `{"ok":true,"handled":…}` | A new, authentic event, handled | Delivered |
 | 200 `{"ok":true,"duplicate":true}` | The same delivery again (openGym retries with the same id) | Delivered, nothing runs twice |
+| 200 `{"ok":true,"ignored":true}` | Authentic, of a type this flow does not handle | Delivered |
 | 400 | Signed, but not an openGym version-1 event | Failed, not retried |
 | 401 | Missing, malformed, wrong or expired signature | Failed, not retried |
 | 413 | Body too large | Failed, not retried |

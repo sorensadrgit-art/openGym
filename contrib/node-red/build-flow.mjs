@@ -39,14 +39,15 @@ const result = verifyOpenGymWebhook({
     maxBytes: Number(env.get('OPENGYM_WEBHOOK_MAX_BYTES')) || 65536
 });
 msg.headers = { 'Content-Type': 'application/json' };
-if (result.ok && !result.duplicate) {
+if (result.ok && !result.duplicate && !result.ignored) {
     context.set('opengymSeen', seen);
     msg.opengym = result.envelope;
     msg.payload = result.envelope;
     node.status({ fill: 'green', shape: 'dot', text: result.envelope.type });
     return [msg, null];
 }
-if (result.duplicate) node.status({ fill: 'blue', shape: 'ring', text: 'duplicate ignored' });
+if (result.ignored) { context.set('opengymSeen', seen); node.status({ fill: 'grey', shape: 'ring', text: 'not handled: ' + result.type.slice(0, 30) }); }
+else if (result.duplicate) node.status({ fill: 'blue', shape: 'ring', text: 'duplicate ignored' });
 else if (result.status >= 500) { node.error('openGym webhook: ' + result.reason); node.status({ fill: 'red', shape: 'ring', text: 'not configured' }); }
 else { node.warn('openGym webhook refused (' + result.status + '): ' + result.reason); node.status({ fill: 'yellow', shape: 'ring', text: 'refused ' + result.status }); }
 msg.statusCode = result.status;
