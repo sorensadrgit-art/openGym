@@ -126,3 +126,20 @@ test('the lookup asks Open Food Facts for the v3.6 nutrition field as well as th
   assert.ok(fields.includes('nutrition'))
   assert.ok(fields.includes('nutriments'))
 })
+
+// Open Food Facts v3 answers an unknown barcode with HTTP 404 and a failure body (checked live,
+// 2026-11-13: GET /api/v3.6/product/0000000000017.json -> 404, result.id product_not_found).
+// That is "not in the database", not an outage, and must not read as one.
+test('an unknown barcode (upstream HTTP 404) is "Product not found", not "lookup unavailable"', async () => {
+  const notFound = createFoodLookup({ fetchImpl: async () => ({ ok: false, status: 404,
+    json: async () => ({ status: 'failure', result: { id: 'product_not_found' }, errors: [{ message: { id: 'product_not_found' } }] }) }) })
+  assert.deepEqual(await notFound('0000000000017'), { status: 404, body: { error: 'Product not found' } })
+  // A 404 whose body is not JSON is still "not found".
+  const bare = createFoodLookup({ fetchImpl: async () => ({ ok: false, status: 404, json: async () => { throw new Error('html') } }) })
+  assert.deepEqual(await bare('3017620422003'), { status: 404, body: { error: 'Product not found' } })
+  // Real upstream trouble stays a 502.
+  for (const status of [429, 500, 503]) {
+    const busy = createFoodLookup({ fetchImpl: async () => ({ ok: false, status, json: async () => ({}) }) })
+    assert.deepEqual(await busy('3017620422003'), { status: 502, body: { error: 'Food lookup unavailable' } }, String(status))
+  }
+})

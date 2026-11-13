@@ -98,6 +98,8 @@ export function createFoodLookup({
           headers: { Accept: 'application/json', 'User-Agent': userAgent },
           signal: AbortSignal.timeout(timeoutMs)
         })
+        // v3 answers an unknown barcode with HTTP 404 (result.id product_not_found): not an outage.
+        if (response.status === 404) return { status: 404, body: { error: 'Product not found' } }
         if (!response.ok) return { status: 502, body: { error: 'Food lookup unavailable' } }
         const food = normalizeOpenFoodFacts(await response.json(), barcode)
         if (!food) return { status: 404, body: { error: 'Product not found' } }
