@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   MEALS, foodEntryProblem, addFood, removeFood, restoreFood, readFood, foodsOn, nutrientsOf,
-  dayTotals, fromLookup, foodDays, fromNutriTrace,
+  dayTotals, fromLookup, foodDays, fromNutriTrace, nutriTraceProblem,
 } from './nutrition-diary.js'
 import { mergeStates, resetIdsOf, STAMPED_MAPS } from './sync-merge.js'
 import { STAMPED_MAPS as API_STAMPED_MAPS } from '../../../api/sync-stamps.js'
@@ -154,5 +154,32 @@ describe('from the NutriTrace food library', () => {
   it('an odd source id read back from another device is dropped to manual, not trusted', () => {
     expect(readFood({ ...oats, src: { kind: 'nutritrace', id: '' } }).src).toEqual({ kind: 'manual' })
     expect(readFood({ ...oats, src: { kind: 'nutritrace', id: 'x'.repeat(65) } }).src).toEqual({ kind: 'manual' })
+  })
+})
+
+describe('a NutriTrace food the diary must not take', () => {
+  const base = { id: '1', name: 'Typo', portion: 1, unit: 'g', basis: '100g', perPortion: { kcal: 50 } }
+  it('says why: no weight, or values no food can have (from the server, or checked here again)', () => {
+    expect(nutriTraceProblem({ ...base, basis: null, per100: null, unit: 'cup' })).toBe('unweighable')
+    expect(nutriTraceProblem({ ...base, per100: null, basis: null, problem: 'implausible' })).toBe('implausible')
+    // An older server that did not check: the app checks the same limits itself.
+    expect(nutriTraceProblem({ ...base, per100: { kcal: 5000, proteinG: null, carbohydrateG: null, fatG: null } })).toBe('implausible')
+    expect(nutriTraceProblem({ ...base, per100: { kcal: 59, proteinG: 101, carbohydrateG: null, fatG: null } })).toBe('implausible')
+    expect(nutriTraceProblem({ ...base, per100: { kcal: 59, proteinG: 11, carbohydrateG: 4, fatG: 0.2 } })).toBe(null)
+  })
+  it('never builds an entry for one, so nothing wrong reaches the diary', () => {
+    expect(fromNutriTrace({ ...base, per100: { kcal: 5000, proteinG: null, carbohydrateG: null, fatG: null } }, { d: '2026-11-13', meal: 'snack', amount: 1 })).toBe(null)
+    expect(fromNutriTrace({ ...base, per100: null, basis: null, problem: 'implausible' }, { d: '2026-11-13', meal: 'snack', amount: 1 })).toBe(null)
+  })
+  it('a portion logged as its own amount gives back exactly what NutriTrace says a portion has', () => {
+    const skyr = { id: '7', name: 'Skyr', portion: 150, unit: 'g', basis: '100g',
+      per100: { kcal: 63, proteinG: 11, carbohydrateG: 4, fatG: 0.2 }, perPortion: { kcal: 95, proteinG: 16.5, carbohydrateG: 6, fatG: 0.3 } }
+    const S = state()
+    addFood(S, fromNutriTrace(skyr, { d: '2026-11-13', meal: 'lunch', amount: skyr.portion }), { now: 1, id: 'p' })
+    const n = nutrientsOf(readFood(S.foodLog.p))
+    expect(Math.abs(n.kcal - skyr.perPortion.kcal)).toBeLessThanOrEqual(1)
+    expect(n.proteinG).toBe(16.5)
+    expect(n.carbohydrateG).toBe(6)
+    expect(n.fatG).toBe(0.3)
   })
 })

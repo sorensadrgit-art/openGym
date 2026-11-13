@@ -42,7 +42,7 @@ beforeEach(() => {
   host = document.createElement('div'); document.body.append(host); root = createRoot(host)
 })
 afterEach(() => { act(() => root.unmount()); host.remove() })
-const mount = async () => act(async () => { root.render(<NutriTraceCard day="2026-11-13" />) })
+const mount = async (day = '2026-11-13') => act(async () => { root.render(<NutriTraceCard day={day} />) })
 const $ = sel => host.querySelector(sel)
 const type = (el, value) => act(() => {
   Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(el, value)
@@ -110,5 +110,37 @@ describe('NutriTrace card', () => {
     await click($('[data-nt-disconnect]'))
     expect(mocks.calls.at(-1)).toMatchObject({ path: '/api/integrations/disconnect', body: { id: 'c1' } })
     expect($('[data-nt-state]').textContent).toBe('Not connected')
+  })
+})
+
+describe('NutriTrace card: what it will not log, and where it logs', () => {
+  const typo = { id: '5', name: 'Typo bar', brand: '', portion: 1, unit: 'g', basis: null, per100: null, perPortion: { kcal: 50 }, problem: 'implausible' }
+  const olderServer = { id: '6', name: 'Unchecked', brand: '', portion: 1, unit: 'g', basis: '100g', per100: { kcal: 5000, proteinG: null, carbohydrateG: null, fatG: null }, perPortion: { kcal: 50 } }
+
+  it('a food with impossible values is shown with the reason and no Add button, from either check', async () => {
+    mocks.routes['GET /api/integrations'] = { connections: [conn] }
+    mocks.routes['GET /api/integrations/nutritrace/foods'] = { foods: [typo, olderServer], total: 2 }
+    await mount()
+    await click($('[data-nt-search]'))
+    for (const id of ['5', '6']) {
+      expect($(`[data-nt-food="${id}"] [data-nt-add]`)).toBe(null)
+      expect($(`[data-nt-food="${id}"]`).textContent).toContain('values per 100 are ones no food can have')
+    }
+    expect(mocks.S.foodLog).toBeUndefined()
+  })
+
+  it('logs to the day it was given and the meal picked, not today or the default', async () => {
+    mocks.routes['GET /api/integrations'] = { connections: [conn] }
+    mocks.routes['GET /api/integrations/nutritrace/foods'] = { foods: [skyr], total: 1 }
+    await mount('2026-11-10')
+    await act(() => {
+      const sel = $('select[name=nt-meal]')
+      Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(sel, 'lunch')
+      sel.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+    await click($('[data-nt-search]'))
+    type($('[data-nt-food="7"] input'), '75')
+    await click($('[data-nt-food="7"] [data-nt-add]'))
+    expect(Object.values(mocks.S.foodLog)[0]).toMatchObject({ d: '2026-11-10', meal: 'lunch', amount: 75, basis: 'g' })
   })
 })

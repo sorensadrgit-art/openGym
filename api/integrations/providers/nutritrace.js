@@ -24,6 +24,8 @@ export const READ_MAX = 512 * 1024;
 export const SEARCH_LIMIT = 25;
 export const QUERY_MAX = 80;
 // The documented form is nt_pat_ plus 43 characters; a little room either side in case it changes.
+// Failures that can clear up without the user doing anything (judgeRead codes).
+export const TRANSIENT = new Set(['timeout', 'dns', 'refused', 'network', 'busy', 'rate']);
 export const TOKEN_RE = /^nt_pat_[A-Za-z0-9_-]{32,64}$/;
 
 /** The instance's base address: origin and path, without a pasted /api/v1, query or fragment. */
@@ -35,21 +37,25 @@ export function baseUrl(raw) {
 }
 
 const num = v => (v == null || v === '' || !Number.isFinite(Number(v)) || Number(v) < 0 ? null : Number(v));
-const text = (v, max) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
+// Text from another server: control characters (terminal escapes, NULs, line breaks) become spaces.
+const text = (v, max) => (typeof v === 'string' ? v.replace(/[\u0000-\u001f\u007f-\u009f]+/g, ' ').replace(/ {2,}/g, ' ').trim().slice(0, max) : '');
+// No food has more energy than pure fat, or more than 100 g of a macro, in 100 g or ml.
+const LIMIT = { kcal: 900, proteinG: 100, carbohydrateG: 100, fatG: 100 };
+const plainId = v => (typeof v === 'number' && Number.isFinite(v)) || (typeof v === 'string' && v.trim() !== '');
 const r1 = v => (v == null ? null : Math.round(v * 10) / 10);
 const UNITS = { g: 'g', gram: 'g', grams: 'g', gr: 'g', ml: 'ml', milliliter: 'ml', millilitre: 'ml', milliliters: 'ml', millilitres: 'ml' };
 
 /** One NutriTrace food as the diary reads it, or null for one without an id or a name. Its image and
  * notes are left out: an image may be relative to the instance, and notes are the user's own. */
 export function foodFromNutriTrace(item) {
-  if (!item || typeof item !== 'object' || item.id == null || !text(item.name, 80)) return null;
-  const n = item.nutrition && typeof item.nutrition === 'object' ? item.nutrition : {};
+  if (!item || typeof item !== 'object' || Array.isArray(item) || !plainId(item.id) || !text(item.name, 80)) return null;
+  const n = item.nutrition && typeof item.nutrition === 'object' && !Array.isArray(item.nutrition) ? item.nutrition : {};
   const pick = (real, published) => num(n[real]) ?? num(n[published]);
   const perPortion = { kcal: pick('calories', 'kcal'), proteinG: pick('proteins', 'protein_g'), carbohydrateG: pick('carbohydrates', 'carbs_g'), fatG: pick('fat', 'fat_g') };
   const portion = item.portion == null ? 100 : num(item.portion);
   const unit = text(item.unit, 20) || 'g';
   const base = UNITS[unit.toLowerCase()] || null;
-  let per100 = null;
+  let per100 = null, problem;
   if (base && portion > 0) {
     const f = 100 / portion;
     per100 = {
@@ -58,11 +64,15 @@ export function foodFromNutriTrace(item) {
       carbohydrateG: perPortion.carbohydrateG == null ? null : r1(perPortion.carbohydrateG * f),
       fatG: perPortion.fatG == null ? null : r1(perPortion.fatG * f),
     };
+    // A value no food can have (a typo, grams entered as kg) is refused as a whole, not clipped:
+    // the diary would otherwise log a wrong number that looks precise.
+    if (Object.entries(per100).some(([k, v]) => v != null && (!Number.isFinite(v) || v > LIMIT[k]))) { per100 = null; problem = 'implausible'; }
   }
   return {
     id: String(item.id).slice(0, 64), name: text(item.name, 80), brand: text(item.brand, 60),
     barcode: /^\d{8,14}$/.test(String(item.barcode || '')) ? String(item.barcode) : null,
     portion, unit, basis: per100 ? (base === 'ml' ? '100ml' : '100g') : null, per100, perPortion,
+    ...(problem ? { problem } : {}),
   };
 }
 
@@ -156,8 +166,11 @@ export function nutritraceProvider({ allowLan = false, get = null, version = 'de
     allowLan,
 
     connect(input) {
-      const base = baseUrl(input?.url);
-      const bad = outboundUrlError(base || String(input?.url || ''), { allowLan });
+      const raw = String(input?.url || '').trim();
+      const base = baseUrl(raw);
+      // The address as typed is judged first: cutting it back to the instance would otherwise drop
+      // a user:password@ part silently instead of refusing it.
+      const bad = outboundUrlError(raw, { allowLan }) || (base ? outboundUrlError(base, { allowLan }) : null);
       if (bad || !base) throw Object.assign(new Error(bad || 'url is not valid'), { status: 400, code: 'url' });
       const token = String(input?.token || '').trim();
       if (!TOKEN_RE.test(token)) throw Object.assign(new Error('Paste a NutriTrace API token (it starts with nt_pat_).'), { status: 400, code: 'token' });
@@ -174,7 +187,9 @@ export function nutritraceProvider({ allowLan = false, get = null, version = 'de
     /** "Check connection" (the hub's test): the token works and carries read:foods. */
     async deliver(job, reveal) {
       const { res, json } = await call(reveal, '/api/v1/me');
-      if (!res.ok) return { ...res, retry: false };
+      // A failure that may pass by itself (unreachable, slow, busy) is not final: the hub keeps the
+      // connection as it is. Only what the user has to fix (token, scope, address) marks it.
+      if (!res.ok) return { ...res, retry: TRANSIENT.has(res.code) };
       const scopes = Array.isArray(json?.scopes) ? json.scopes : [];
       if (!scopes.includes('read:foods')) return { ok: false, retry: false, status: res.status, ms: res.ms, code: 'scope', msg: 'The token needs the read:foods scope.' };
       return { ok: true, status: res.status, ms: res.ms };

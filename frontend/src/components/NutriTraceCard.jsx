@@ -4,7 +4,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useStore } from '../store/useStore.js'
 import { api } from '../lib/api.js'
-import { MEALS, addFood, fromNutriTrace } from '../lib/nutrition-diary.js'
+import { MEALS, addFood, fromNutriTrace, nutriTraceProblem } from '../lib/nutrition-diary.js'
 import { MEAL_LABEL } from './FoodDiary.jsx'
 
 const post = (path, body) => api(path, { method: 'POST', body: JSON.stringify(body) })
@@ -41,7 +41,7 @@ function Result({ food, day, meal }) {
   const update = useStore(s => s.update)
   const [amount, setAmount] = useState(food.portion > 0 ? String(food.portion) : '100')
   const [state, setState] = useState({ done: false, error: '' })
-  const canLog = !!fromNutriTrace(food, { d: day, meal, amount: 1 })
+  const problem = nutriTraceProblem(food)
   const add = () => {
     try {
       update(s => { addFood(s, fromNutriTrace(food, { d: day, meal, amount: amount === '' ? NaN : Number(amount) })) })
@@ -53,12 +53,14 @@ function Result({ food, day, meal }) {
     <div className="diary-entry-main"><strong>{food.name}</strong>
       <span>{[food.brand, food.portion != null && food.unit ? `${food.portion} ${food.unit}` : '', kcal != null ? `${kcal} kcal` : ''].filter(Boolean).join(' · ')}</span></div>
     {state.done ? <span className="nt-added" role="status">Added</span>
-      : canLog ? <div className="nt-add">
+      : !problem ? <div className="nt-add">
         <input className="nt-amount" type="text" inputMode="decimal" value={amount} onChange={e => { setAmount(e.target.value); setState({ done: false, error: '' }) }} aria-label={`Amount of ${food.name} in ${unitLabel(food.basis)}`} />
         <span className="nt-unit">{unitLabel(food.basis)}</span>
         <button type="button" className="diary-primary" onClick={add} data-nt-add>Add</button>
       </div>
-      : <span className="addon-footnote nt-cannot">Measured in {food.unit || 'servings'}: only g or mL can go into the diary.</span>}
+      : problem === 'implausible'
+        ? <span className="addon-footnote nt-cannot">Its values per 100 are ones no food can have. Check this food in NutriTrace.</span>
+        : <span className="addon-footnote nt-cannot">Measured in {food.unit || 'servings'}: only g or mL can go into the diary.</span>}
     {state.error && <p className="addon-error" role="alert">{state.error}</p>}
   </li>
 }

@@ -152,8 +152,21 @@ export function fromLookup(food, { d, meal, amount }) {
 /** A diary entry from a /api/integrations/nutritrace/foods food, or null for one the diary cannot
  * weigh: NutriTrace foods in cups, pieces or custom units have no grams without a density, and the
  * diary does not guess one. */
+/** Why the diary cannot take a NutriTrace food, or null when it can: 'unweighable' (cups, pieces,
+ * custom units: no grams without a density) or 'implausible' (values no food has per 100, as the
+ * server judged or as this app judges again with the diary's own limits). */
+export function nutriTraceProblem(food) {
+  if (!food || food.problem === 'implausible') return 'implausible'
+  if (!isMap(food.per100) || (food.basis !== '100g' && food.basis !== '100ml')) return 'unweighable'
+  for (const k of NUTRIENTS) {
+    const v = num(food.per100[k])
+    if (v !== null && (Number.isNaN(v) || v < 0 || v > LIMIT[k])) return 'implausible'
+  }
+  return null
+}
+
 export function fromNutriTrace(food, { d, meal, amount }) {
-  if (!food || !isMap(food.per100) || (food.basis !== '100g' && food.basis !== '100ml')) return null
+  if (nutriTraceProblem(food)) return null
   const per = {}
   for (const k of NUTRIENTS) per[k] = num(food.per100[k])
   return {
