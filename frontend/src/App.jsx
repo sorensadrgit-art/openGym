@@ -92,6 +92,8 @@ const History = lazyView(() => import('./views/History.jsx'))
 const Library = lazyView(() => import('./views/Library.jsx'))
 const Muscles = lazyView(() => import('./views/Muscles.jsx'))
 const SettingsRoute = lazyView(() => import('./views/Settings.jsx').then(m => ({ default: m.SettingsRoute })))
+// Large optional add-on libraries are not prefetched with the core application.
+const Addons = lazy(() => import('./views/Addons.jsx'))
 // The app tour's overlay (components/Tour.jsx): fetched when it opens, never before.
 const Tour = lazy(() => import('./components/Tour.jsx'))
 let viewsPrefetched = false
@@ -348,6 +350,7 @@ function Shell() {
       <Route path="/structural-balance" element={<StructuralBalance />} />
       {isOn(S, 'body') && <Route path="/progress-photos" element={<ProgressPhotos />} />}
       {isOn(S, 'body') && <Route path="/measurements" element={<Measurements />} />}
+      <Route path="/addons" element={<Suspense fallback={null}><Addons /></Suspense>} />
       <Route path="/settings" element={<SettingsRoute />} />
       <Route path="/settings/:page" element={<SettingsRoute />} />
       {/* The Coach screens gate themselves on the instance config; the routes exist whenever the

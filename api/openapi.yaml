@@ -101,6 +101,9 @@ info:
     - `INTEGRATIONS` (unset by default, e.g. `webhook`): the providers of the `integrations`
       routes, and the `integrations` block of `GET /api/config`. `INTEGRATIONS_ALLOW_LAN=1`
       lets a webhook reach the home network (http too), never loopback or link-local.
+    - `ADDON_NUTRITION=1` (off by default): enables session-gated, rate-limited
+      `GET /api/addons/food` and adds `addons: { nutrition: true }` to the
+      signed-in response from `GET /api/config` only.
     - `MEDIA_UPLOADS` (default on; `0` removes the `media` routes and the `media` block of
       `GET /api/config`), `MEDIA_QUOTA_MB` (200 per profile, `0` = no cap),
       `MEDIA_IMAGE_MAX_MB` (2), `MEDIA_GIF_MAX_MB` (8), `MEDIA_VIDEO_MAX_MB` (40),
@@ -231,6 +234,44 @@ paths:
                   ok: { type: boolean, const: false }
                   writable: { type: boolean, const: false }
               example: { ok: false, writable: false }
+
+  /api/addons/food:
+    get:
+      tags: [integrations]
+      operationId: lookupAddonFood
+      summary: Look up one food barcode with Open Food Facts
+      description: |
+        Optional, read-only and disabled by default (`ADDON_NUTRITION=1`).
+        Requires a valid user session; only the barcode is sent to Open Food Facts,
+        never account information or workout history. The barcode must be 8–14
+        decimal digits. Rate-limited to 12 requests per minute per signed-in
+        profile; normalized results are cached for 15 minutes. Nutrition fields
+        reflect third-party published data and may be missing or incorrect.
+      parameters:
+        - in: query
+          name: barcode
+          required: true
+          description: Numeric GTIN (8–14 digits, leading zeros preserved)
+          schema:
+            type: string
+            pattern: '^[0-9]{8,14}$'
+          example: '3017620422003'
+      responses:
+        '200':
+          description: Sanitized Open Food Facts product fields per 100 g or mL, no images.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  food:
+                    type: object
+                    description: Product name, barcode, brand, nutrients, and reported allergens.
+        '400': { description: Invalid barcode format }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { description: Add-on not enabled or barcode not found }
+        '429': { description: Per-profile lookup budget exceeded }
+        '502': { description: Open Food Facts unavailable }
 
   /api/config:
     get:
