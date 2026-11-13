@@ -162,7 +162,7 @@ export default function Addons() {
   const back = () => ((window.history.state?.idx || 0) > 0 ? nav(-1) : nav('/settings/integrations', { replace: true }))
   const workouts = Array.isArray(S?.workouts) ? S.workouts : []
   return <main className="addons-page">
-    <button type="button" className="sp-back addons-back" onClick={back}><Icon name="chevronLeft" /><span>Integrations</span></button>
+    <button type="button" className="sp-back addons-back" data-back="/settings/integrations" onClick={back}><Icon name="chevronLeft" /><span>Integrations</span></button>
     <motion.header className="addons-hero" initial={reduceMotion ? false : { opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.26 }}>
       <span className="addon-kicker">OPENGYM / EXTENSION LAB</span>
