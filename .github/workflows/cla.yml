@@ -16,8 +16,8 @@ permissions:
   statuses: write
 
 # pull_request_target runs with a write token, which is safe here only because nothing from the
-# pull request is checked out or executed: the action reads the PR's commit authors through the
-# API and writes to the cla-signatures branch. Keep it that way (no actions/checkout of the head).
+# pull request is checked out or executed: only the default branch is checked out to bootstrap the
+# signatures branch. The action reads the PR's commit authors through the API.
 jobs:
   cla:
     # Every other comment (most of them) skips the job instead of starting a runner for nothing.
@@ -27,6 +27,28 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+      - name: Ensure the signatures branch exists
+        run: |
+          if git ls-remote --exit-code --heads origin refs/heads/cla-signatures >/dev/null 2>&1; then
+            exit 0
+          fi
+
+          git checkout --orphan cla-signatures
+          git rm -rf .
+          mkdir -p signatures
+          printf '{\n  "signedContributors": []\n}\n' > signatures/cla.json
+          git add signatures/cla.json
+          git -c user.name='github-actions[bot]' \
+            -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            commit -m 'Initialize CLA signatures'
+          if ! git push origin HEAD:refs/heads/cla-signatures; then
+            if ! git ls-remote --exit-code --heads origin refs/heads/cla-signatures >/dev/null 2>&1; then
+              exit 1
+            fi
+          fi
       - uses: contributor-assistant/github-action@ca4a40a7d1004f18d9960b404b97e5f30a505a08 # v2.6.1, pinned: this job holds a write token
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
