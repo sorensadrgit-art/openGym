@@ -396,7 +396,7 @@ tag. Write it for the people using the app: what changed for them, short, no em 
 - Catalogue: the leg press and hack squat no longer count the calves (#1034, thanks @cubetes in #1063), and the ab tuck's steps describe the captain's chair its picture shows (#958, thanks @cubetes in #1064).
 - Brazilian Portuguese reads Brazilian now: no more Portugal's words and forms, and real Brazilian gym words (thanks @lukol01 in #1067).
 - The APK's updater falls back to GitHub's API link when the download link on github.com fails, so an update no longer gets stuck there (thanks @lodepav in #1084).
-- The week and month recap picture keeps a long volume inside its tile (#1195), Your year pauses its glow while the Share sheet is open so the picture is drawn sooner (#1196, #1103), and the tests pass in any timezone and in any order (#1197). Thanks @cubetes.
+- The week and month recap picture keeps a long volume inside its tile (#1195), Your year pauses its glow while the Share sheet is open, so the phone has less to draw while it makes the picture (#1196, for #1103), and the tests pass in any timezone and in any order (#1197). Thanks @cubetes.
 - Rather not run a server? ElfHosted sponsors openGym and runs it for you, built from our tagged releases with no changes and a 7-day trial (README and docs/SELF_HOSTING.md). Your own server stays the first-class way.
 - opengym.ch/brand has the brand kit: the logo, icons, colours, banners and the brand guide to download.
 
