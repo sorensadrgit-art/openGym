@@ -40,7 +40,7 @@ ignores it, and the phone treats an event without the new fields as before. The 
 | `setDone` | `wid`, `exId`, `entryIdx`, `setIdx`, `sid?`, `w?`, `r?`, `sec?`, `side?`, `at`, `hr?`, `rpe?`/`rir?`, `restEnd?` | the workout screen's own tick; of two changes of one set the later wins (`at` against the set's stamp, below); `restEnd`: the end of the rest the watch started for this tick (watch clock, ms), `0` for none (protocol 2) |
 | `setHr` | `wid`, `exId`, `entryIdx`, `setIdx`, `sid?`, `hr?`, `restHr?` | heart rate onto that set, running or saved |
 | `rest` | `wid`, `endsAt` (ms, watch clock) or `null`, `at` | +15, −15 or Skip on the watch (`null`: Skip, or −15 to nothing): the phone's rest follows when `at` is newer than its own last change (protocol 2) |
-| `addSet` | `wid`, `exId`, `entryIdx`, `sid` (the watch's own, e.g. `w-<uuid>`), `after?` (a set's id), `w?`, `r?`, `sec?`, `at` | a row like the exercise's last, after `after` or at the end, with that id; once only (#1139, #1185) |
+| `addSet` | `wid`, `exId`, `entryIdx`, `sid` (the watch's own, e.g. `w-<uuid>`), `after?` (a set's id), `w?`, `r?`, `sec?`, `at` | a row like the exercise's last, after `after` or at the end, with that id; once only (#1139, #1185: ready on the phone, no watch sends it in 1.4.5, the set menu comes in 1.4.6) |
 | `removeSet` | `wid`, `exId`, `entryIdx`, `setIdx`, `sid`, `at` | that row out, unless it is done (or the exercise's only row): then nothing, and the next snapshot shows it again |
 | `finish` | `wid`, `at`, `idle?`, `left?` | Finish and save, ending at `at`; an idle finish is checked against the phone's own log first |
 | `discard` | `wid`, `at` | the workout screen's Discard |

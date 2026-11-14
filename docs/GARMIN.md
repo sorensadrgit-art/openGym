@@ -17,8 +17,11 @@ measures a watch-only workout's memory peak. **The phone side is wired up in v1.
 Android app (APK and Play builds, `android/app/src/ciq`) and in the iPhone app
 (`ios/App/App/GarminLink.swift`, the Swift package added at build time by `ios/ci/add-garmin.rb`),
 behind the same `WatchBridge` plugin as the other watches, with Settings → Garmin for pairing and
-status. Both compile in CI; none of it has met a real Garmin yet. That and the Connect IQ Store
-submission are the owner's (see "What the owner does" and `/root/uploads/opengym-146/garmin-store/`).
+status. Both compile in CI; none of it has met a real Garmin yet. The watch app is in the
+[Connect IQ Store](https://apps.garmin.com/apps/62e66310-66de-4bdd-8e40-5d2c0d853a08) since
+November 2026; each release's `openGym.iq` goes up there by hand, together with the phone release
+(see "What the owner does" and `/root/uploads/opengym-146/garmin-store/`). It needs openGym 1.4.5
+or later on the phone, and the F-Droid build has no Garmin link at all.
 
 ## What it does
 
@@ -453,7 +456,7 @@ You need the Connect IQ SDK and the device files:
 
 The strings come from the Wear OS watch's (which come from the app's packs and the Apple Watch's
 translations): `node frontend/garmin/garmin-strings.mjs` writes `resources*/strings/strings.xml`;
-run it after changing them there. 21 languages (each listed in `manifest.xml`); Connect IQ has no
+run it after changing them there. 22 languages (each listed in `manifest.xml`); Connect IQ has no
 Hindi, Bengali or Persian, and one Portuguese (pt).
 
 ## What the owner does
@@ -471,7 +474,8 @@ Hindi, Bengali or Persian, and one Portuguese (pt).
    (name, description, at least one screenshot per screen shape, the icon, category Health &
    Fitness), the privacy policy URL (the app sends heart rate only to the user's own phone app),
    and "requires a companion app" pointing at the Play Store and App Store listings. Garmin reviews
-   it, usually within a few days. The app id in `manifest.xml` stays the same forever.
+   it, usually within a few days (done: approved in November 2026). The app id in `manifest.xml`
+   stays the same forever.
    Its store id (62e66310-66de-4bdd-8e40-5d2c0d853a08, https://apps.garmin.com/apps/62e66310-66de-4bdd-8e40-5d2c0d853a08)
    is in `GarminLink.STORE_ID` (Android) and `GarminLink.storeId` (iPhone), so "Get openGym for Garmin" opens its store page. The listing text and a checklist are in
    `/root/uploads/opengym-146/garmin-store/` on the release machine.
@@ -481,7 +485,7 @@ Hindi, Bengali or Persian, and one Portuguese (pt).
 ### Versions
 
 `manifest.xml` `version` is the release, the same as the phone app's `versionName` and Zepp OS's
-`version.name` (1.4.4 now). Connect IQ has no separate build number to bump (Wear OS derives its
+`version.name` (1.4.5 now). Connect IQ has no separate build number to bump (Wear OS derives its
 `versionCode` from the phone's, Zepp OS counts `major*10000 + minor*100 + patch`): the store only
 wants each upload's version higher than the last, which the release number already is.
 `node frontend/garmin/check.mjs` fails when it is not `frontend/package.json`'s, so the release
