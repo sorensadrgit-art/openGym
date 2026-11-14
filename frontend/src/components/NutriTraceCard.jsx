@@ -118,7 +118,7 @@ export default function NutriTraceCard({ day }) {
         <button type="submit" className="diary-primary" disabled={busy} data-nt-search>{busy ? 'Searching…' : 'Search'}</button>
       </form>
       {results && (results.length
-        ? <ul className="nt-results" aria-live="polite">{results.map(f => <Result key={f.id} food={f} day={day} meal={meal} />)}</ul>
+        ? <ul className="nt-results" aria-live="polite">{results.map(f => <Result key={`${f.id}|${day}|${meal}`} food={f} day={day} meal={meal} />)}</ul>
         : <p className="addon-empty">No foods in your NutriTrace match that.</p>)}
       <div className="nt-tools">
         <button type="button" className="diary-secondary" onClick={check} data-nt-check>Check connection</button>

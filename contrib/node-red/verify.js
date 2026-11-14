@@ -35,8 +35,9 @@ function seenAdd(store, id, expiresMs, nowMs, max) {
 
 /**
  * opts: { rawBody: Buffer, headers: { lower-case names }, secret, crypto, seen: object,
- *         now: ms, toleranceSec: 300, maxBytes: 65536, maxSeen: 10000 }
- * Answers { ok: true, status: 200, envelope } for a new, authentic delivery,
+ *         now: ms, toleranceSec: 300, maxBytes: 65536, maxSeen: 10000, defer: false }
+ * Answers { ok: true, status: 200, envelope } for a new, authentic delivery (with `defer`, also
+ *         `remember`, for rememberDelivery once it is handled),
  *         { ok: true, status: 200, duplicate: true, id } for one already seen,
  *         { ok: true, status: 200, ignored: true, id, type } for an authentic one of a type this
  *         flow does not handle, or
@@ -84,11 +85,24 @@ function verifyOpenGymWebhook(opts) {
   // fails the timestamp check above). openGym's own retries carry the same id and get the 200.
   var seen = opts.seen || {};
   if (seenHas(seen, envelope.id, nowMs)) return { ok: true, status: 200, duplicate: true, id: envelope.id };
-  seenAdd(seen, envelope.id, nowMs + 2 * tolerance * 1000, nowMs, maxSeen);
+  var until = nowMs + 2 * tolerance * 1000;
   // Authentic, but a type this flow does not handle (one openGym added later): acknowledge it with
   // a 200. A 4xx would be a final failure in openGym and mark the webhook for attention.
-  if (OPENGYM_EVENTS.indexOf(envelope.type) === -1) return { ok: true, status: 200, ignored: true, id: envelope.id, type: envelope.type };
+  if (OPENGYM_EVENTS.indexOf(envelope.type) === -1) {
+    seenAdd(seen, envelope.id, until, nowMs, maxSeen);
+    return { ok: true, status: 200, ignored: true, id: envelope.id, type: envelope.type };
+  }
+  // With `defer`, the id is recorded only once the handler is done (rememberDelivery): recorded
+  // now, a handler that then failed would turn openGym's retry into a "duplicate" and lose it.
+  if (opts.defer) return { ok: true, status: 200, envelope: envelope, remember: { id: envelope.id, until: until } };
+  seenAdd(seen, envelope.id, until, nowMs, maxSeen);
   return { ok: true, status: 200, envelope: envelope };
+}
+
+/** Records a deferred delivery (the `remember` of a defer result) as handled. */
+function rememberDelivery(store, remember, nowMs, max) {
+  if (!remember || typeof remember.id !== 'string') return store;
+  return seenAdd(store, remember.id, remember.until, typeof nowMs === 'number' ? nowMs : Date.now(), max > 0 ? max : 10000);
 }
 
 /** What the sender sees: one fixed body per status, nothing derived from the request. */
@@ -104,5 +118,5 @@ function publicBody(result) {
 
 /* --- export (not pasted into the flow) --- */
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { verifyOpenGymWebhook, publicBody, seenHas, seenAdd, OPENGYM_EVENTS };
+  module.exports = { verifyOpenGymWebhook, publicBody, seenHas, seenAdd, rememberDelivery, OPENGYM_EVENTS };
 }

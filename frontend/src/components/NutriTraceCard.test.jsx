@@ -144,3 +144,24 @@ describe('NutriTrace card: what it will not log, and where it logs', () => {
     expect(Object.values(mocks.S.foodLog)[0]).toMatchObject({ d: '2026-11-10', meal: 'lunch', amount: 75, basis: 'g' })
   })
 })
+
+describe('logging the same food again', () => {
+  // "Added" belongs to one day and meal: switching either must offer Add again, or the same food
+  // cannot be logged at another meal or on another day (Codex review on #8).
+  it('switching the meal after an Add offers Add again, and logs to the new meal', async () => {
+    mocks.routes['GET /api/integrations'] = { connections: [conn] }
+    mocks.routes['GET /api/integrations/nutritrace/foods'] = { foods: [skyr], total: 1 }
+    await mount()
+    await click($('[data-nt-search]'))
+    await click($('[data-nt-food="7"] [data-nt-add]'))
+    expect($('[data-nt-food="7"]').textContent).toContain('Added')
+    await act(async () => {
+      const sel = $('select[name=nt-meal]')
+      Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(sel, 'dinner')
+      sel.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+    expect($('[data-nt-food="7"] [data-nt-add]')).not.toBe(null)
+    await click($('[data-nt-food="7"] [data-nt-add]'))
+    expect(Object.values(mocks.S.foodLog).map(e => e.meal).sort()).toEqual(['dinner', 'snack'])
+  })
+})

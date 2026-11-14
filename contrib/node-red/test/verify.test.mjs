@@ -8,7 +8,7 @@ import { signature, newSecret } from '../../../api/integrations/crypto.js'
 import { envelope, testData } from '../../../api/integrations/events.js'
 
 const require = createRequire(import.meta.url)
-const { verifyOpenGymWebhook, publicBody, OPENGYM_EVENTS } = require('../verify.js')
+const { verifyOpenGymWebhook, publicBody, OPENGYM_EVENTS, rememberDelivery } = require('../verify.js')
 
 const SECRET = newSecret()
 const NOW = Date.UTC(2026, 10, 13, 12, 0, 0)
@@ -168,4 +168,27 @@ test('an authentic delivery of an event type this flow does not know is acknowle
   assert.equal(again.duplicate, true)
   // Authenticity still comes first: the same unknown type, unsigned or tampered, is a 401.
   assert.equal(check(delivery({ body, header: 't=1,v1=' + '0'.repeat(64) })).status, 401)
+})
+
+// A delivery counts as seen only once its handler is done: recorded before, a handler that failed
+// would turn openGym's retry (same id) into a "duplicate" 200 and the event would be lost
+// (Codex review on #8). With `defer`, the check records nothing and says what to record after.
+test('defer: an authentic delivery is not recorded until rememberDelivery, so a failed handler can be retried', () => {
+  const seen = {}
+  const body = JSON.stringify(event('workout.finished', 'evt_defer'))
+  const first = check(delivery({ body }), { seen, defer: true })
+  assert.equal(first.ok, true)
+  assert.ok(first.envelope)
+  assert.deepEqual(Object.keys(seen), [], 'nothing recorded yet')
+  assert.equal(first.remember.id, 'evt_defer')
+  // The handler failed: openGym retries the same id and it is handled again, not a duplicate.
+  const retry = check(delivery({ body }), { seen, defer: true })
+  assert.ok(retry.envelope && !retry.duplicate)
+  // The handler succeeded: recorded now, so a third copy is the duplicate.
+  rememberDelivery(seen, retry.remember, NOW, 10000)
+  assert.equal(check(delivery({ body }), { seen, defer: true }).duplicate, true)
+  // Without defer nothing changes for other callers: recorded at once.
+  const eager = {}
+  check(delivery({ body }), { seen: eager })
+  assert.equal(check(delivery({ body }), { seen: eager }).duplicate, true)
 })

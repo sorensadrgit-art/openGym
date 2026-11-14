@@ -26,8 +26,10 @@ export function verifierSource() {
 export const GLUE = `
 /* ---- Node-RED glue (build-flow.mjs) ----
  * Output 1: an authentic, new delivery, on to the handler. Output 2: the answer for everything
- * else (refused, too large, or already handled), straight to the http response node. */
-const seen = context.get('opengymSeen') || {};
+ * else (refused, too large, or already handled), straight to the http response node.
+ * Seen ids are in flow context, shared with "Record as delivered", which adds a delivery only
+ * after the handler finished: a handler that throws leaves it out, so openGym's retry runs again. */
+const seen = flow.get('opengymSeen') || {};
 const result = verifyOpenGymWebhook({
     rawBody: msg.payload,
     headers: msg.req && msg.req.headers,
@@ -36,17 +38,18 @@ const result = verifyOpenGymWebhook({
     seen: seen,
     now: Date.now(),
     toleranceSec: Number(env.get('OPENGYM_WEBHOOK_TOLERANCE_SEC')) || 300,
-    maxBytes: Number(env.get('OPENGYM_WEBHOOK_MAX_BYTES')) || 65536
+    maxBytes: Number(env.get('OPENGYM_WEBHOOK_MAX_BYTES')) || 65536,
+    defer: true
 });
 msg.headers = { 'Content-Type': 'application/json' };
 if (result.ok && !result.duplicate && !result.ignored) {
-    context.set('opengymSeen', seen);
+    msg._opengymRemember = result.remember;
     msg.opengym = result.envelope;
     msg.payload = result.envelope;
     node.status({ fill: 'green', shape: 'dot', text: result.envelope.type });
     return [msg, null];
 }
-if (result.ignored) { context.set('opengymSeen', seen); node.status({ fill: 'grey', shape: 'ring', text: 'not handled: ' + result.type.slice(0, 30) }); }
+if (result.ignored) { flow.set('opengymSeen', seen); node.status({ fill: 'grey', shape: 'ring', text: 'not handled: ' + result.type.slice(0, 30) }); }
 else if (result.duplicate) node.status({ fill: 'blue', shape: 'ring', text: 'duplicate ignored' });
 else if (result.status >= 500) { node.error('openGym webhook: ' + result.reason); node.status({ fill: 'red', shape: 'ring', text: 'not configured' }); }
 else { node.warn('openGym webhook refused (' + result.status + '): ' + result.reason); node.status({ fill: 'yellow', shape: 'ring', text: 'refused ' + result.status }); }
@@ -70,6 +73,19 @@ msg.headers = { 'Content-Type': 'application/json' };
 msg.payload = { ok: true, handled: ev.type };
 return msg;`
 
+export const DONE = `
+/* ---- Node-RED glue (build-flow.mjs) ----
+ * The handler finished: record the delivery so openGym's next copy of it is a duplicate, then
+ * pass the handler's answer on. */
+if (msg._opengymRemember) {
+    const seen = flow.get('opengymSeen') || {};
+    rememberDelivery(seen, msg._opengymRemember, Date.now(), 10000);
+    flow.set('opengymSeen', seen);
+}
+delete msg._opengymRemember;
+return msg;
+`
+
 const FAILED = `// Something threw after the request arrived. openGym retries a 5xx later; no details are sent back.
 msg.statusCode = 500;
 msg.headers = { 'Content-Type': 'application/json' };
@@ -87,11 +103,13 @@ export function buildFlow() {
       outputs: 2, timeout: 0, noerr: 0, initialize: '', finalize: '',
       libs: [{ var: 'crypto', module: 'crypto' }], x: 380, y: 120, wires: [['og_handle'], ['og_reply']] },
     { id: 'og_handle', type: 'function', z, name: 'Handle event (demo)', func: HANDLER,
-      outputs: 1, timeout: 0, noerr: 0, initialize: '', finalize: '', libs: [], x: 620, y: 80, wires: [['og_reply', 'og_debug']] },
+      outputs: 1, timeout: 0, noerr: 0, initialize: '', finalize: '', libs: [], x: 620, y: 80, wires: [['og_done', 'og_debug']] },
+    { id: 'og_done', type: 'function', z, name: 'Record as delivered', func: verifierSource() + '\n' + DONE,
+      outputs: 1, timeout: 0, noerr: 0, initialize: '', finalize: '', libs: [], x: 860, y: 80, wires: [['og_reply']] },
     { id: 'og_debug', type: 'debug', z, name: 'Event summary', active: true, tosidebar: true, console: false,
-      tostatus: true, complete: 'summary', targetType: 'msg', statusVal: 'summary', statusType: 'auto', x: 860, y: 40, wires: [] },
-    { id: 'og_reply', type: 'http response', z, name: 'Answer openGym', statusCode: '', headers: {}, x: 870, y: 120, wires: [] },
-    { id: 'og_catch', type: 'catch', z, name: 'Errors after receipt', scope: ['og_verify', 'og_handle'], uncaught: false, x: 380, y: 200, wires: [['og_failed']] },
+      tostatus: true, complete: 'summary', targetType: 'msg', statusVal: 'summary', statusType: 'auto', x: 860, y: 30, wires: [] },
+    { id: 'og_reply', type: 'http response', z, name: 'Answer openGym', statusCode: '', headers: {}, x: 1080, y: 120, wires: [] },
+    { id: 'og_catch', type: 'catch', z, name: 'Errors after receipt', scope: ['og_verify', 'og_handle', 'og_done'], uncaught: false, x: 380, y: 200, wires: [['og_failed']] },
     { id: 'og_failed', type: 'function', z, name: '500, no details', func: FAILED,
       outputs: 1, timeout: 0, noerr: 0, initialize: '', finalize: '', libs: [], x: 620, y: 200, wires: [['og_reply']] },
   ]
