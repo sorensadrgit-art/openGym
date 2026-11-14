@@ -247,7 +247,7 @@ main.api-main .lead { color: var(--fg-2); max-width: 58ch; margin: 14px 0 0; fon
   <p class="api-facts">
     <span>OpenAPI 3.1.0</span>
     <span>openGym v1.4.3</span>
-    <span>94 endpoints</span>
+    <span>95 endpoints</span>
     <span>AGPL-3.0-or-later</span>
   </p>
 
@@ -279,7 +279,7 @@ main.api-main .lead { color: var(--fg-2); max-width: 58ch; margin: 14px 0 0; fon
   </div>
   <div class="ov">
     <h3>Environment-dependent behavior</h3>
-<ul><li><code>INVITE_ONLY=1</code>: registration requires a valid invite code (minted by an admin).</li><li><code>ALLOW_GUEST=0</code>: hides the client-side &quot;continue without account&quot; mode; the server merely reports the flag via <code>GET /api/config</code> (guest mode never talks to this API at all).</li><li><code>ADMIN_UIDS=&lt;uid&gt;,&lt;uid&gt;</code>: user ids treated as admins (a <code>&quot;admin&quot;: true</code> flag on the user record in <code>db.json</code> works too). Admins get the <code>/api/admin/*</code> routes. One admin is the owner: the record with <code>&quot;owner&quot;: true</code>, else the first <code>ADMIN_UIDS</code> entry with a profile, else the oldest admin. Only the owner appoints and removes admins, deletes an admin, hands the role on and clears the audit log.</li><li><code>FIRST_USER_ADMIN</code> (default off; <code>1</code> turns it on): the first profile registered on an instance with no profiles gets that <code>&quot;admin&quot;: true</code> flag and is the owner. Decided at registration only, never applied to an instance that already has profiles.</li><li><code>AUDIT_LOG</code> (default on), <code>AUDIT_MAX</code> (default 5000 events), <code>AUDIT_DAYS</code> (default 90), <code>AUDIT_IP</code> (<code>off</code> | <code>net</code> | <code>full</code>, default off) shape the audit log served by <code>GET /api/admin/audit</code>.</li><li><code>PASSWORD_LOGIN=1</code>: adds the <code>password</code> routes and <code>password_login: true</code> in <code>GET /api/config</code>. Off by default.</li><li><code>DEFAULT_LANG</code> (e.g. <code>pt-BR</code>; unset by default): <code>default_lang</code> in <code>GET /api/config</code>, the language of the sign-in screen and of every profile that never picked one.</li><li><code>TRUST_PROXY=1</code>: the throttle reads the client address from proxy headers (set by the bundled <code>docker-compose.yml</code>, where only the web container can reach the API).</li><li><code>INTEGRATIONS</code> (unset by default, e.g. <code>webhook</code>): the providers of the <code>integrations</code> routes, and the <code>integrations</code> block of <code>GET /api/config</code>. <code>INTEGRATIONS_ALLOW_LAN=1</code> lets a webhook reach the home network (http too), never loopback or link-local.</li><li><code>ADDON_NUTRITION=1</code> (off by default): enables session-gated, rate-limited <code>GET /api/addons/food</code> and adds <code>addons: { nutrition: true }</code> to the signed-in response from <code>GET /api/config</code> only.</li><li><code>MEDIA_UPLOADS</code> (default on; <code>0</code> removes the <code>media</code> routes and the <code>media</code> block of <code>GET /api/config</code>), <code>MEDIA_QUOTA_MB</code> (200 per profile, <code>0</code> = no cap), <code>MEDIA_IMAGE_MAX_MB</code> (2), <code>MEDIA_GIF_MAX_MB</code> (8), <code>MEDIA_VIDEO_MAX_MB</code> (40), <code>MEDIA_VIDEO_MAX_SEC</code> (60), <code>MEDIA_GC_GRACE_DAYS</code> (14), <code>MEDIA_UPLOADS_PER_HOUR</code> (600 per profile), <code>MEDIA_MIN_FREE_MB</code> (512, <code>0</code> = no floor): photos and videos of custom exercises (tag <code>media</code>). Every MB here is 2^20 bytes.</li></ul>
+<ul><li><code>INVITE_ONLY=1</code>: registration requires a valid invite code (minted by an admin).</li><li><code>ALLOW_GUEST=0</code>: hides the client-side &quot;continue without account&quot; mode; the server merely reports the flag via <code>GET /api/config</code> (guest mode never talks to this API at all).</li><li><code>ADMIN_UIDS=&lt;uid&gt;,&lt;uid&gt;</code>: user ids treated as admins (a <code>&quot;admin&quot;: true</code> flag on the user record in <code>db.json</code> works too). Admins get the <code>/api/admin/*</code> routes. One admin is the owner: the record with <code>&quot;owner&quot;: true</code>, else the first <code>ADMIN_UIDS</code> entry with a profile, else the oldest admin. Only the owner appoints and removes admins, deletes an admin, hands the role on and clears the audit log.</li><li><code>FIRST_USER_ADMIN</code> (default off; <code>1</code> turns it on): the first profile registered on an instance with no profiles gets that <code>&quot;admin&quot;: true</code> flag and is the owner. Decided at registration only, never applied to an instance that already has profiles.</li><li><code>AUDIT_LOG</code> (default on), <code>AUDIT_MAX</code> (default 5000 events), <code>AUDIT_DAYS</code> (default 90), <code>AUDIT_IP</code> (<code>off</code> | <code>net</code> | <code>full</code>, default off) shape the audit log served by <code>GET /api/admin/audit</code>.</li><li><code>PASSWORD_LOGIN=1</code>: adds the <code>password</code> routes and <code>password_login: true</code> in <code>GET /api/config</code>. Off by default.</li><li><code>DEFAULT_LANG</code> (e.g. <code>pt-BR</code>; unset by default): <code>default_lang</code> in <code>GET /api/config</code>, the language of the sign-in screen and of every profile that never picked one.</li><li><code>TRUST_PROXY=1</code>: the throttle reads the client address from proxy headers (set by the bundled <code>docker-compose.yml</code>, where only the web container can reach the API).</li><li><code>INTEGRATIONS</code> (unset by default, e.g. <code>webhook</code>): the providers of the <code>integrations</code> routes, and the <code>integrations</code> block of <code>GET /api/config</code>. <code>INTEGRATIONS_ALLOW_LAN=1</code> lets a webhook reach the home network (http too), never loopback or link-local.</li><li><code>MEDIA_UPLOADS</code> (default on; <code>0</code> removes the <code>media</code> routes and the <code>media</code> block of <code>GET /api/config</code>), <code>MEDIA_QUOTA_MB</code> (200 per profile, <code>0</code> = no cap), <code>MEDIA_IMAGE_MAX_MB</code> (2), <code>MEDIA_GIF_MAX_MB</code> (8), <code>MEDIA_VIDEO_MAX_MB</code> (40), <code>MEDIA_VIDEO_MAX_SEC</code> (60), <code>MEDIA_GC_GRACE_DAYS</code> (14), <code>MEDIA_UPLOADS_PER_HOUR</code> (600 per profile), <code>MEDIA_MIN_FREE_MB</code> (512, <code>0</code> = no floor): photos and videos of custom exercises (tag <code>media</code>). Every MB here is 2^20 bytes.</li></ul>
   </div>
   <div class="ov">
     <h3>Conventions</h3>
@@ -345,7 +345,7 @@ main.api-main .lead { color: var(--fg-2); max-width: 58ch; margin: 14px 0 0; fon
     <div class="ptab">
   <div class="prow rrow">
     <span class="r-code s2">200</span>
-    <span class="p-desc">Instance flags, plus the Coach block for a signed-in caller.<span class="r-sig">{ invite_only: boolean, allow_guest: boolean, coach: object | null, password_login: always true, default_lang: string, media: <a href="#schema-MediaConfig">MediaConfig</a>, integrations: object }</span></span>
+    <span class="p-desc">Instance flags, plus the Coach block for a signed-in caller.<span class="r-sig">{ invite_only: boolean, allow_guest: boolean, coach: object | null, password_login: always true, default_lang: string, media: <a href="#schema-MediaConfig">MediaConfig</a>, integrations: object, foodLookup: object }</span></span>
   </div>
     </div>
   </div>
@@ -3009,6 +3009,64 @@ main.api-main .lead { color: var(--fg-2); max-width: 58ch; margin: 14px 0 0; fon
   <p class="sub">Settings → Integrations: outbound webhooks now, more providers later. Off unless the server runs with <code>INTEGRATIONS</code> (e.g. <code>INTEGRATIONS=webhook</code>); then a profile can add its own connections. Secrets are sealed at rest and shown once. See docs/INTEGRATIONS.md.</p>
   <div class="eps">
 
+<details class="ep" id="op-getFoodLookup">
+  <summary>
+    <span class="m get">GET</span>
+    <span class="ep-path"><code>/api/food-lookup</code></span>
+    <span class="ep-chev" aria-hidden="true"></span>
+    <span class="ep-sum">Look up a food barcode</span>
+  </summary>
+  <div class="ep-body">
+<p>User-initiated read-only preview from Open Food Facts. Requires a valid session, FOOD_LOOKUP enabled by the operator, and the user's current stored modules.nutrition === true. Missing/non-boolean choices are off. No diary write.</p>
+<p>Only the barcode reaches the fixed HTTPS v3.6 product endpoint, with fixed fields, Accept and an app/version User-Agent (optional operator FOOD_LOOKUP_CONTACT). No cookies, tokens, user id, profile data, client headers or images. Redirects and private/mixed DNS are refused. Connect timeout 2 seconds, total including body 5 seconds; response cap 64 KiB before parsing. No retries or background work.</p>
+<p>Memory cache: at most 128 products, 15 minute positive and 60 second not-found lifetime. Authorization still runs on hits. Per-user limit 5/minute includes hits; instance limit 7 upstream calls/61 seconds. Limits are per process, not coordinated across replicas or other users of the same public IP. Render attribution with the preview. Nothing is saved automatically.</p>
+    <p class="ep-auth"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span>Requires a session: the cookie set at sign-in, or <code>Authorization: Bearer &lt;token&gt;</code> from mobile-app pairing.</span></p>
+<p class="ep-h">Query parameters</p><div class="ptab">
+  <div class="prow">
+    <span class="p-name">barcode<em class="p-req" title="required">required</em></span>
+    <span class="p-type">string</span>
+    <span class="p-desc">Exactly one parameter. ASCII GTIN with valid check digit; leading zeros preserved. Extra parameters are rejected.</span>
+  </div>
+</div>
+
+    <p class="ep-h">Responses</p>
+    <div class="ptab">
+  <div class="prow rrow">
+    <span class="r-code s2">200</span>
+    <span class="p-desc">Attributed preview, not a saved diary entry.<span class="r-sig"><a href="#schema-FoodPreview">FoodPreview</a></span></span>
+  </div>
+  <div class="prow rrow">
+    <span class="r-code s4">400</span>
+    <span class="p-desc">food-lookup-invalid-barcode (syntax, length, check digit or parameters).</span>
+  </div>
+  <div class="prow rrow">
+    <span class="r-code s4">401</span>
+    <span class="p-desc">food-lookup-auth-required.</span>
+  </div>
+  <div class="prow rrow">
+    <span class="r-code s4">403</span>
+    <span class="p-desc">food-lookup-disabled (operator) or nutrition-disabled (profile). No outbound request.</span>
+  </div>
+  <div class="prow rrow">
+    <span class="r-code s4">404</span>
+    <span class="p-desc">food-lookup-not-found. Explicit unknown-product response from OFF.</span>
+  </div>
+  <div class="prow rrow">
+    <span class="r-code s4">429</span>
+    <span class="p-desc">food-lookup-rate-limited. Per-user or per-instance budget exhausted.</span>
+  </div>
+  <div class="prow rrow">
+    <span class="r-code s5">502</span>
+    <span class="p-desc">food-lookup-upstream. Unsafe DNS, redirect, upstream error, oversized, malformed or unsupported response.</span>
+  </div>
+  <div class="prow rrow">
+    <span class="r-code s5">504</span>
+    <span class="p-desc">food-lookup-timeout. Connect or total deadline exceeded.</span>
+  </div>
+    </div>
+  </div>
+</details>
+
 <details class="ep" id="op-lookupAddonFood">
   <summary>
     <span class="m get">GET</span>
@@ -3078,6 +3136,54 @@ main.api-main .lead { color: var(--fg-2); max-width: 58ch; margin: 14px 0 0; fon
   <div class="prow rrow">
     <span class="r-code s4">401</span>
     <span class="p-desc">No session, expired/revoked session, or a disabled account.<span class="r-sig"><code>{&quot;error&quot;:&quot;not signed in&quot;}</code></span></span>
+  </div>
+    </div>
+  </div>
+</details>
+
+<details class="ep" id="op-searchNutriTraceFoods">
+  <summary>
+    <span class="m get">GET</span>
+    <span class="ep-path"><code>/api/integrations/nutritrace/foods</code></span>
+    <span class="ep-chev" aria-hidden="true"></span>
+    <span class="ep-sum">Search the profile's own NutriTrace food library</span>
+  </summary>
+  <div class="ep-body">
+<p>Read only, for the Extension Lab's food diary. Needs <code>nutritrace</code> in <code>INTEGRATIONS</code> and a NutriTrace connection on the profile (<code>POST /api/integrations/connect</code> with <code>{ &quot;provider&quot;: &quot;nutritrace&quot;, &quot;url&quot;: &quot;https://…&quot;, &quot;token&quot;: &quot;nt_pat_…&quot; }</code>; the token needs the <code>read:foods</code> scope and is sealed on the server, never sent back). The server calls the instance's <code>GET /api/v1/foods</code> with the search text and nothing else, and answers at most 25 foods. NutriTrace's <code>nutrition</code> is read as per <code>portion</code> of <code>unit</code>; <code>per100</code> is given only when that unit is grams or millilitres. 30 searches a minute per profile.</p>
+    <p class="ep-auth"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span>Requires a session: the cookie set at sign-in, or <code>Authorization: Bearer &lt;token&gt;</code> from mobile-app pairing.</span></p>
+<p class="ep-h">Query parameters</p><div class="ptab">
+  <div class="prow">
+    <span class="p-name">q</span>
+    <span class="p-type">string <span class="p-hint">(&le; 80 chars)</span></span>
+    <span class="p-desc">Search text (case-insensitive name and brand match in NutriTrace), cut to 80 characters.</span>
+  </div>
+</div>
+
+    <p class="ep-h">Responses</p>
+    <div class="ptab">
+  <div class="prow rrow">
+    <span class="r-code s2">200</span>
+    <span class="p-desc">The matching foods.<span class="r-sig">{ foods: object[], total: integer }</span></span>
+  </div>
+  <div class="prow rrow">
+    <span class="r-code s4">401</span>
+    <span class="p-desc">No session, expired/revoked session, or a disabled account.<span class="r-sig"><code>{&quot;error&quot;:&quot;not signed in&quot;}</code></span></span>
+  </div>
+  <div class="prow rrow">
+    <span class="r-code s4">404</span>
+    <span class="p-desc">Integrations are off, NutriTrace is not offered, or the profile has no NutriTrace connection.</span>
+  </div>
+  <div class="prow rrow">
+    <span class="r-code s4">409</span>
+    <span class="p-desc">The connection is paused.</span>
+  </div>
+  <div class="prow rrow">
+    <span class="r-code s4">429</span>
+    <span class="p-desc">Too many searches from this profile, or NutriTrace asked to slow down (<code>Retry-After</code>).</span>
+  </div>
+  <div class="prow rrow">
+    <span class="r-code s5">502</span>
+    <span class="p-desc">NutriTrace refused the token or scope, could not be reached, or answered with something unreadable; <code>code</code> says which.</span>
   </div>
     </div>
   </div>
@@ -3353,54 +3459,6 @@ main.api-main .lead { color: var(--fg-2); max-width: 58ch; margin: 14px 0 0; fon
   <div class="prow rrow">
     <span class="r-code s4">404</span>
     <span class="p-desc"><code>code</code> <code>off</code>: the server runs without <code>INTEGRATIONS</code> (the default). <code>code</code> <code>missing</code>: no such connection on this profile (another profile's id is the same answer).<span class="r-sig"><code>{&quot;error&quot;:&quot;integrations are off on this server&quot;}</code></span></span>
-  </div>
-    </div>
-  </div>
-</details>
-
-<details class="ep" id="op-searchNutriTraceFoods">
-  <summary>
-    <span class="m get">GET</span>
-    <span class="ep-path"><code>/api/integrations/nutritrace/foods</code></span>
-    <span class="ep-chev" aria-hidden="true"></span>
-    <span class="ep-sum">Search the profile's own NutriTrace food library</span>
-  </summary>
-  <div class="ep-body">
-<p>Read only, for the Extension Lab's food diary. Needs <code>nutritrace</code> in <code>INTEGRATIONS</code> and a NutriTrace connection on the profile (<code>POST /api/integrations/connect</code> with <code>{ &quot;provider&quot;: &quot;nutritrace&quot;, &quot;url&quot;: &quot;https://…&quot;, &quot;token&quot;: &quot;nt_pat_…&quot; }</code>; the token needs the <code>read:foods</code> scope and is sealed on the server, never sent back). The server calls the instance's <code>GET /api/v1/foods</code> with the search text and nothing else, and answers at most 25 foods. NutriTrace's <code>nutrition</code> is read as per <code>portion</code> of <code>unit</code>; <code>per100</code> is given only when that unit is grams or millilitres. 30 searches a minute per profile.</p>
-    <p class="ep-auth"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span>Requires a session: the cookie set at sign-in, or <code>Authorization: Bearer &lt;token&gt;</code> from mobile-app pairing.</span></p>
-<p class="ep-h">Query parameters</p><div class="ptab">
-  <div class="prow">
-    <span class="p-name">q</span>
-    <span class="p-type">string <span class="p-hint">(&le; 80 chars)</span></span>
-    <span class="p-desc">Search text (case-insensitive name and brand match in NutriTrace), cut to 80 characters.</span>
-  </div>
-</div>
-
-    <p class="ep-h">Responses</p>
-    <div class="ptab">
-  <div class="prow rrow">
-    <span class="r-code s2">200</span>
-    <span class="p-desc">The matching foods.<span class="r-sig">{ foods: object[], total: integer }</span></span>
-  </div>
-  <div class="prow rrow">
-    <span class="r-code s4">401</span>
-    <span class="p-desc">No session, expired/revoked session, or a disabled account.<span class="r-sig"><code>{&quot;error&quot;:&quot;not signed in&quot;}</code></span></span>
-  </div>
-  <div class="prow rrow">
-    <span class="r-code s4">404</span>
-    <span class="p-desc">Integrations are off, NutriTrace is not offered, or the profile has no NutriTrace connection.</span>
-  </div>
-  <div class="prow rrow">
-    <span class="r-code s4">409</span>
-    <span class="p-desc">The connection is paused.</span>
-  </div>
-  <div class="prow rrow">
-    <span class="r-code s4">429</span>
-    <span class="p-desc">Too many searches from this profile, or NutriTrace asked to slow down (<code>Retry-After</code>).</span>
-  </div>
-  <div class="prow rrow">
-    <span class="r-code s5">502</span>
-    <span class="p-desc">NutriTrace refused the token or scope, could not be reached, or answered with something unreadable; <code>code</code> says which.</span>
   </div>
     </div>
   </div>
@@ -4238,6 +4296,152 @@ main.api-main .lead { color: var(--fg-2); max-width: 58ch; margin: 14px 0 0; fon
        is <b>representative, not enforced</b>: the server stores it opaquely and the app
        grows it over time.</p>
     <div class="eps">
+
+<details class="ep sch" id="schema-FoodPreview">
+  <summary>
+    <span class="sch-name"><code>FoodPreview</code></span>
+    <span class="ep-chev" aria-hidden="true"></span>
+    <span class="ep-sum"></span>
+  </summary>
+  <div class="ep-body">
+
+<div class="ptab">
+  <div class="prow">
+    <span class="p-name">source<em class="p-req" title="required">required</em></span>
+    <span class="p-type">always &quot;open-food-facts&quot;</span>
+    <span class="p-desc"></span>
+  </div>
+  <div class="prow">
+    <span class="p-name">externalId<em class="p-req" title="required">required</em></span>
+    <span class="p-type">string</span>
+    <span class="p-desc">Requested GTIN including leading zeros</span>
+  </div>
+  <div class="prow">
+    <span class="p-name">label<em class="p-req" title="required">required</em></span>
+    <span class="p-type">string <span class="p-hint">(&le; 160 chars)</span></span>
+    <span class="p-desc">Control-free plain text. Barcode fallback if unnamed.</span>
+  </div>
+  <div class="prow">
+    <span class="p-name">brand</span>
+    <span class="p-type">string <span class="p-hint">(&le; 120 chars)</span></span>
+    <span class="p-desc"></span>
+  </div>
+  <div class="prow">
+    <span class="p-name">quantityText</span>
+    <span class="p-type">string <span class="p-hint">(&le; 80 chars)</span></span>
+    <span class="p-desc"></span>
+  </div>
+  <div class="prow">
+    <span class="p-name">per100<em class="p-req" title="required">required</em></span>
+    <span class="p-type">object</span>
+    <span class="p-desc">As-sold values from the explicit upstream 100g or 100ml basis. Unknown, invalid, string, qualified or estimated nutrients are omitted, never made zero. Mass-basis caps are 900 kcal and 100 g per macro; volume-basis caps are 1800 kcal and 200 g. No inference from package size or density.</span>
+  </div>
+  <div class="prow">
+    <span class="p-name">per100.basis<em class="p-req" title="required">required</em></span>
+    <span class="p-type">&quot;g&quot; | &quot;ml&quot;</span>
+    <span class="p-desc"></span>
+  </div>
+  <div class="prow">
+    <span class="p-name">per100.energyKcal</span>
+    <span class="p-type">number <span class="p-hint">(0&ndash;1800)</span></span>
+    <span class="p-desc"></span>
+  </div>
+  <div class="prow">
+    <span class="p-name">per100.proteinG</span>
+    <span class="p-type">number <span class="p-hint">(0&ndash;200)</span></span>
+    <span class="p-desc"></span>
+  </div>
+  <div class="prow">
+    <span class="p-name">per100.carbohydrateG</span>
+    <span class="p-type">number <span class="p-hint">(0&ndash;200)</span></span>
+    <span class="p-desc">Available carbohydrates as reported by OFF</span>
+  </div>
+  <div class="prow">
+    <span class="p-name">per100.fatG</span>
+    <span class="p-type">number <span class="p-hint">(0&ndash;200)</span></span>
+    <span class="p-desc"></span>
+  </div>
+  <div class="prow">
+    <span class="p-name">per100.energyConversion</span>
+    <span class="p-type">always &quot;kJ/4.184&quot;</span>
+    <span class="p-desc">Present only when energy was converted from kJ.</span>
+  </div>
+  <div class="prow">
+    <span class="p-name">serving</span>
+    <span class="p-type">object | object</span>
+    <span class="p-desc">Only an explicitly parseable positive g or ml serving. Exactly one amount property, with a canonical label.</span>
+  </div>
+  <div class="prow">
+    <span class="p-name">serving.label<em class="p-req" title="required">required</em></span>
+    <span class="p-type">string <span class="p-hint">(&le; 32 chars)</span></span>
+    <span class="p-desc"></span>
+  </div>
+  <div class="prow">
+    <span class="p-name">serving.grams</span>
+    <span class="p-type">number <span class="p-hint">(&ndash;10000)</span></span>
+    <span class="p-desc"></span>
+  </div>
+  <div class="prow">
+    <span class="p-name">serving.millilitres</span>
+    <span class="p-type">number <span class="p-hint">(&ndash;10000)</span></span>
+    <span class="p-desc"></span>
+  </div>
+  <div class="prow">
+    <span class="p-name">fetchedAt<em class="p-req" title="required">required</em></span>
+    <span class="p-type">string <span class="p-hint">(date-time)</span></span>
+    <span class="p-desc">Time fetched from OFF; cache hits retain the original time.</span>
+  </div>
+  <div class="prow">
+    <span class="p-name">attribution<em class="p-req" title="required">required</em></span>
+    <span class="p-type">object</span>
+    <span class="p-desc">Display with the preview and retain with any future user-confirmed snapshot.</span>
+  </div>
+  <div class="prow">
+    <span class="p-name">attribution.text<em class="p-req" title="required">required</em></span>
+    <span class="p-type">always &quot;Contains information from Open Food Facts, available under the Open Database License (ODbL).&quot;</span>
+    <span class="p-desc"></span>
+  </div>
+  <div class="prow">
+    <span class="p-name">attribution.url<em class="p-req" title="required">required</em></span>
+    <span class="p-type">string <span class="p-hint">(uri)</span></span>
+    <span class="p-desc"></span>
+  </div>
+  <div class="prow">
+    <span class="p-name">attribution.license<em class="p-req" title="required">required</em></span>
+    <span class="p-type">always &quot;ODbL-1.0&quot;</span>
+    <span class="p-desc"></span>
+  </div>
+  <div class="prow">
+    <span class="p-name">attribution.licenseUrl<em class="p-req" title="required">required</em></span>
+    <span class="p-type">always &quot;https://opendatacommons.org/licenses/odbl/1-0/&quot;</span>
+    <span class="p-desc"></span>
+  </div>
+</div>
+  </div>
+</details>
+
+<details class="ep sch" id="schema-FoodLookupError">
+  <summary>
+    <span class="sch-name"><code>FoodLookupError</code></span>
+    <span class="ep-chev" aria-hidden="true"></span>
+    <span class="ep-sum"></span>
+  </summary>
+  <div class="ep-body">
+
+<div class="ptab">
+  <div class="prow">
+    <span class="p-name">error<em class="p-req" title="required">required</em></span>
+    <span class="p-type">string</span>
+    <span class="p-desc">Fixed safe message; never upstream text.</span>
+  </div>
+  <div class="prow">
+    <span class="p-name">code<em class="p-req" title="required">required</em></span>
+    <span class="p-type">&quot;food-lookup-auth-required&quot; | &quot;food-lookup-disabled&quot; | &quot;nutrition-disabled&quot; | &quot;food-lookup-invalid-barcode&quot; | &quot;food-lookup-not-found&quot; | &quot;food-lookup-rate-limited&quot; | &quot;food-lookup-upstream&quot; | &quot;food-lookup-timeout&quot;</span>
+    <span class="p-desc"></span>
+  </div>
+</div>
+  </div>
+</details>
 
 <details class="ep sch" id="schema-IntegrationEvent">
   <summary>

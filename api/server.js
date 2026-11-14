@@ -41,7 +41,8 @@ import { atomicWrite as durableWrite } from './durable.js';
 import { ipv6Groups, guardedLookup, pushEndpointError, MAX_PUSH_ENDPOINT } from './net-guard.js';
 import { createIntegrations } from './integrations/index.js';
 import { integrationRoutes } from './integrations/routes.js';
-import { createFoodLookup } from './addons/food.js';
+import { createFoodLookup, FoodLookupError } from './food-lookup.js';
+import { createFoodLookup as createAddonFoodLookup } from './addons/food.js';
 import { excusedOn, nudgeFor, nudgeWindowOpen, toneOf } from './nudge.js';
 import { wrappedPushYear, wrappedSummary, wrappedPushOwed, wrappedPush } from './wrapped.js';
 
@@ -84,7 +85,9 @@ const PASSWORD_LOGIN = /^(1|true|yes|on)$/i.test(process.env.PASSWORD_LOGIN || '
 // sent to that service unless a signed-in person explicitly searches a barcode.
 const NUTRITION_ON = /^(1|true|yes|on)$/i.test(process.env.ADDON_NUTRITION || '');
 const FOOD_RATE = createWindow({ max: 12, windowMs: 60000 });
-const lookupFood = createFoodLookup({ userAgent: process.env.OPEN_FOOD_FACTS_USER_AGENT || undefined });
+// The Extension Lab's lookup (main branch): its factory RETURNS the lookup function itself,
+// unlike the Nutrition module's factory below which returns an object with .lookup().
+const lookupFood = createAddonFoodLookup({ userAgent: process.env.OPEN_FOOD_FACTS_USER_AGENT || undefined });
 // The language the sign-in screen, and every profile that never picked one, starts in (#303) —
 // for an instance whose people share a language. Only a tag's shape is checked here; the app
 // matches it against the languages it has and ignores one it does not know. Unset, it is left
@@ -131,6 +134,10 @@ const SECRET = fs.readFileSync(secretFile, 'utf8').trim();
 // Integrations (integrations/, docs/INTEGRATIONS.md): off unless INTEGRATIONS names some. Their
 // connections live in DATA_DIR/integrations/, sealed with a key derived from SECRET.
 const integrations = createIntegrations({ dataDir: DATA, secret: SECRET, version: '1' });
+const foodLookup = createFoodLookup({
+  enabled: /^(1|true|yes|on)$/i.test(process.env.FOOD_LOOKUP || ''),
+  contact: process.env.FOOD_LOOKUP_CONTACT || ''
+});
 
 const dbFile = path.join(DATA, 'db.json');
 // Every account, passkey and invite. Only a missing file starts empty: an unreadable one (a write
@@ -2134,8 +2141,27 @@ const routes = {
       // Which integrations this server offers (only to a session, like the Coach block). Absent
       // with INTEGRATIONS unset, which is how the app knows to show the server cards as off.
       ...(readSession(req) && integrations.publicConfig() ? { integrations: integrations.publicConfig() } : {}),
+      // Setup discovery only: this does not probe OFF or assert that it is reachable.
+      ...(readSession(req) ? { foodLookup: foodLookup.publicConfig() } : {}),
+      // The Extension Lab's own addon surface (main branch). Distinct from the profile-gated
+      // Nutrition module above; both are opt-in and both are off by default.
       ...(readSession(req) && NUTRITION_ON ? { addons: { nutrition: true } } : {})
     });
+  },
+
+  'GET /api/food-lookup': async (req, res) => {
+    const user = readSession(req);
+    const params = new URL(req.url, 'http://x').searchParams;
+    const barcode = params.size === 1 && params.has('barcode') ? params.get('barcode') : null;
+    try {
+      const product = await foodLookup.lookup({ uid: user?.id,
+        nutrition: user ? readState(user.id)?.modules?.nutrition : false, barcode });
+      json(res, 200, product);
+    } catch (e) {
+      if (!(e instanceof FoodLookupError)) throw e;
+      json(res, e.status, { error: e.message, code: e.code },
+        e.retryAfter ? { 'Retry-After': String(e.retryAfter) } : undefined);
+    }
   },
 
   // A paired phone's token was minted once, at pairing, and nothing ever renewed it: after
