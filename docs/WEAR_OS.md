@@ -5,7 +5,8 @@ TicWatch, Fossil Gen 6 and the rest. It is the Apple Watch app's twin: the phone
 of truth, and the watch follows the workout the phone runs, logs sets on it and can start a
 routine by itself.
 
-**Status: beta since v1.4.4.** It builds and its tests pass, but it has met few real watches yet.
+**Status: beta since v1.4.4.** It builds, its tests pass and it runs end to end on the Wear OS
+emulators against the phone's real sync code, but it has met few real watches yet.
 On the watch it is labelled "openGym Beta"; on Google Play it ships to the Wear OS closed-testing
 track first. Drop the label (`app_name` in `wear/wear-strings.mjs`) once testers confirm it.
 
@@ -73,7 +74,7 @@ versions by @cubetes): one design on every wrist. The rules live in `WatchLogic.
   up next, plus the waiting count) and **complication** (sets done as a ring, else the streak;
   "↑3" as its title while sets wait). A long-text slot (like the Apple Watch's rectangular one)
   shows the same words in full: "3 of 12 sets, Waiting to sync 3" or "Week streak: 12".
-- **Language**: the app's, not the watch's (the phone sends it), in all 24 of the app's languages.
+- **Language**: the app's, not the watch's (the phone sends it), in all 26 of the app's languages.
 - **Always On** on a screen that can burn in: the whole screen moves up to 3 dp once a minute,
   round a 3 × 3 grid (`BurnIn`).
 - **TalkBack**: a number box (weight, reps, seconds) and the weigh-in read their name and value
@@ -88,8 +89,9 @@ versions by @cubetes): one design on every wrist. The rules live in `WatchLogic.
   larger, and builds with MP4 animations send the still only: only 180 px leaves the package. It moves only
   on screen, holds one frame in Always On, and goes with the stills when the workout ends.
 
-Still not on Wear OS: calories saved to Health Connect (#724; the watch shows them), and a
-Settings page on the watch (the phone's settings apply).
+Still not on Wear OS: calories saved to Health Connect (#724, #1173; the watch shows them),
+marking a set as warm-up, failure or drop and adding or removing sets from the watch (#1185),
+and a Settings page on the watch (the phone's settings apply). #1173 and #1185 are planned for 1.4.6.
 
 ### Screenshots
 
@@ -120,7 +122,8 @@ Sideloading the APK (Galaxy Watch 4 and newer, Pixel Watch):
 1. On the watch: Settings → About watch → Software → tap "Software version" seven times, then
    Settings → Developer options → ADB debugging on, Wireless debugging on. Note the IP and port.
 2. On a computer in the same Wi-Fi: `adb pair <ip>:<pair-port>` (the code is on the watch), then
-   `adb connect <ip>:<port>` and `adb install openGym-Wear-<version>.apk`.
+   `adb connect <ip>:<port>` and `adb install openGym-Wear-<version>.apk`. No computer? A
+   sideloading app on the phone such as Wear Installer does the same over wireless debugging.
 3. Open openGym on the phone once, then on the watch. Settings → Wear OS watch on the phone should
    say "openGym is on your watch and in reach" and, a moment later, when it last heard from the watch.
 
