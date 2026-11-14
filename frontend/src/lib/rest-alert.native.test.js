@@ -5,6 +5,7 @@
 // it must never become the value of a promise (the Coach hang, #42): here that would hang every
 // rest alert call.
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { readFileSync } from 'node:fs'
 
 const h = vi.hoisted(() => {
   vi.stubEnv('VITE_MOBILE', '1')   // lib/mobile.js: MOBILE = import.meta.env.VITE_MOBILE === '1'
@@ -186,12 +187,70 @@ describe('the alarm buzz in the Android app', () => {
     expect(calls.buzz).toHaveLength(1)
   })
 
+  // #1007: the end's own time goes with the tone, so Android rings a rest once when the alarm
+  // already did and a thawed page catches up a moment later.
+  it('toneNative names the end it is for, and leaves it out without one', async () => {
+    h.platform = 'android'
+    const calls = capture()
+    const alert = await import('./rest-alert.js')
+    await expect(alert.toneNative('bell', { at: 1_700_000_000_000.4 })).resolves.toBe(true)
+    await expect(alert.toneNative('chime')).resolves.toBe(true)
+    expect(calls.tone).toEqual([{ kind: 'bell', onSilent: false, at: 1_700_000_000_000 }, { kind: 'chime', onSilent: false }])
+  })
+
   it('answers false in a browser shell without touching any plugin', async () => {
     h.platform = 'web'
     const alert = await import('./rest-alert.js')
     await expect(alert.buzzAsAlarm([200, 100, 200])).resolves.toBe(false)
     expect(h.registerPlugin).not.toHaveBeenCalled()
     expect(unhandled).toEqual([])
+  })
+})
+
+// The native half cannot run here; what it must do with the flag is read off its source.
+describe('the Android side of Vibrate off', () => {
+  const src = name => readFileSync(new URL(`../../android/app/src/main/java/ch/duartesantos/opengym/${name}.java`, import.meta.url), 'utf8')
+  const alert = src('RestAlert')
+
+  it('reads the flag from the page, defaulting to on for an older page', () => {
+    expect(src('RestAlertPlugin')).toMatch(/call\.getBoolean\("vibrate", Boolean\.TRUE\)/)
+  })
+
+  it('posts on a channel created without vibration, and only buzzes by hand when allowed to', () => {
+    expect(alert).toMatch(/QUIET_CHANNEL_ID = "rest-over-quiet"/)
+    expect(alert).toMatch(/if \(!vibrate\) return QUIET_CHANNEL_ID;/)
+    expect(alert).toMatch(/channel\.enableVibration\(false\)/)
+    expect(alert).toMatch(/if \(!shown && vibrate\) vibrateFallback\(ctx\);/)
+    expect(alert).toMatch(/if \(vibrate\) b\.setVibrate\(VIBRATE\);/)
+    expect(alert.match(/\.setVibrate\(/g)).toHaveLength(1)
+  })
+
+  it('keeps the flag for an end the countdown or a moved alarm fires', () => {
+    // fireFromCountdown and updateAlarm build their own intents from the last schedule.
+    expect(alert.match(/intent\.putExtra\("vibrate", lastVibrate\);/g)).toHaveLength(2)
+    expect(alert).toMatch(/intent\.putExtra\("vibrate", vibrate\);/)
+  })
+})
+
+describe('the Android side of the alarm buzz (#375)', () => {
+  const src = name => readFileSync(new URL(`../../android/app/src/main/java/ch/duartesantos/opengym/${name}.java`, import.meta.url), 'utf8')
+  const alert = src('RestAlert')
+  const plugin = src('RestAlertPlugin')
+
+  it('reads the flag from the page, off for an older page, and offers buzz()', () => {
+    expect(plugin).toMatch(/call\.getBoolean\("alarmBuzz", Boolean\.FALSE\)/)
+    expect(plugin).toMatch(/@PluginMethod\s+public void buzz\(PluginCall call\)/)
+  })
+
+  it('buzzes with the alarm usage, on every API level the app runs on', () => {
+    expect(alert).toMatch(/VibrationAttributes\.createForUsage\(VibrationAttributes\.USAGE_ALARM\)/)
+    expect(alert).toMatch(/setUsage\(AudioAttributes\.USAGE_ALARM\)/)
+  })
+
+  it('posts the notification on the quiet channel then, so the ringer-on phone buzzes once', () => {
+    expect(alert).toMatch(/boolean vibrate = intent\.getBooleanExtra\("vibrate", true\) && !alarmBuzz;/)
+    expect(alert).toMatch(/if \(alarmBuzz\) buzz\(ctx, VIBRATE\);/)
+    expect(alert.match(/intent\.putExtra\("alarmBuzz", lastAlarmBuzz\);/g)).toHaveLength(2)
   })
 })
 
@@ -305,6 +364,41 @@ describe('the notification permission never holds the rest alarm back', () => {
   })
 })
 
+// Discord (baodor): the iPhone app paused the music when the rest sound played. The app's session
+// must always be a mixing one: .ambient at rest, and .playback (for "Play even on silent") only
+// with .mixWithOthers and .duckOthers, back to .ambient after the tone.
+describe('iPhone: the rest tone never stops the music', () => {
+  const swift = readFileSync(new URL('../../ios/App/App/RestAlertPlugin.swift', import.meta.url), 'utf8')
+
+  it('sets the mixing .ambient session at load and whenever it lets go', () => {
+    expect(swift).toMatch(/static func mixWithMusic\(\)\s*\{\s*try\? AVAudioSession\.sharedInstance\(\)\.setCategory\(\.ambient/)
+    // at load, and in letGo after the last sound of ours ended (Reddit, v1.4.5)
+    expect(swift.match(/RestAlertPlugin\.mixWithMusic\(\)/g)).toHaveLength(2)
+    expect(swift).toMatch(/private func letGo\(attempt: Int\)[\s\S]*?setActive\(false, options: \[\.notifyOthersOnDeactivation\]\)[\s\S]*?mixWithMusic/)
+  })
+
+  it('every session change goes through the ledger, whose shapes all mix', () => {
+    // One setCategory with a shape (apply) and the resting one; no hand-written .playback left.
+    expect(swift.match(/setCategory\(/g)).toHaveLength(2)
+    expect(swift).toMatch(/setCategory\(shape\.avCategory, mode: shape\.avMode, options: shape\.avOptions\)/)
+    expect(swift).not.toMatch(/setCategory\(\.soloAmbient|setCategory\(\.playback/)
+    expect(swift).toMatch(/call\.getBool\("onSilent"\) \?\? false/)
+    expect(swift).toMatch(/usesApplicationAudioSession = true/)
+    // Nothing deactivates outside letGo, so nothing lets go while another sound of ours plays.
+    expect(swift.match(/setActive\(false/g)).toHaveLength(1)
+    const core = readFileSync(new URL('../../ios/App/CueAudioCore/Sources/CueAudioCore/CueAudioLedger.swift', import.meta.url), 'utf8')
+    expect(core).toMatch(/category: \.playback, mode: speechOnly \? \.voicePrompt : \.standard, mixWithOthers: true, duckOthers: true/)
+    expect(core).not.toMatch(/import (UIKit|AVFoundation)/)
+  })
+
+  it('the app project compiles the ledger in and CI tests it', () => {
+    const pbx = readFileSync(new URL('../../ios/App/App.xcodeproj/project.pbxproj', import.meta.url), 'utf8')
+    expect(pbx).toMatch(/CueAudioLedger\.swift in Sources/)
+    const ci = readFileSync(new URL('../../../.github/workflows/ios.yml', import.meta.url), 'utf8')
+    expect(ci).toMatch(/working-directory: frontend\/ios\/App\/CueAudioCore/)
+  })
+})
+
 // Spoken cues (v1.4.5, lib/spoken-cues.js): the phone's own voice, ducking the music like the tone.
 describe('spoken cues through the phone', () => {
   it('hands the line to the plugin and answers true, false in a browser shell', async () => {
@@ -318,5 +412,21 @@ describe('spoken cues through the phone', () => {
     alert = await import('./rest-alert.js')
     await expect(alert.speakNative('Rest is over')).resolves.toBe(false)
     expect(unhandled).toEqual([])
+  })
+
+  it('Android ducks for a line and lets go when nothing is left to say', () => {
+    const java = readFileSync(new URL('../../android/app/src/main/java/ch/duartesantos/opengym/SpeechCue.java', import.meta.url), 'utf8')
+    expect(java).toMatch(/AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK|RestAlert\.duck\(/)
+    expect(java).toMatch(/RestAlert\.unduck\(/)
+    expect(java).not.toMatch(/AUDIOFOCUS_GAIN\b(?!_TRANSIENT)/)
+    const manifest = readFileSync(new URL('../../android/app/src/main/AndroidManifest.xml', import.meta.url), 'utf8')
+    expect(manifest).toMatch(/android\.intent\.action\.TTS_SERVICE/)
+  })
+
+  it('the iPhone speaks in the mixing, ducking session and offers speak and hush', () => {
+    const swift = readFileSync(new URL('../../ios/App/App/RestAlertPlugin.swift', import.meta.url), 'utf8')
+    expect(swift).toMatch(/CAPPluginMethod\(name: "speak"/)
+    expect(swift).toMatch(/CAPPluginMethod\(name: "hush"/)
+    expect(swift).toMatch(/AVSpeechSynthesizer/)
   })
 })

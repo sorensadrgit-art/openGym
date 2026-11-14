@@ -5,6 +5,8 @@ import { EventEmitter } from 'node:events';
 import { Readable } from 'node:stream';
 import { spawnSync } from 'node:child_process';
 import * as food from '../food-lookup.js';
+import { readFileSync } from 'node:fs';
+const VERSION = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version;
 
 const barcode = '3017620422003', other = '96385074', third = '036000291452';
 const payload = code => ({ code, status: 'success', result: { id: 'product_found' },
@@ -42,7 +44,7 @@ test('outbound request contains only fixed URL, headers and internal time bounds
   const hub = create({ contact: 'ops@example.org', transport: async (...args) => { got = args; return reply(); } });
   assert.equal((await query(hub)).label, 'Example');
   assert.equal(got[0], 'https://world.openfoodfacts.org/api/v3.6/product/3017620422003?fields=code,product_name,brands,quantity,serving_size,nutrition');
-  assert.deepEqual(got[1].headers, { Accept: 'application/json', 'User-Agent': 'openGym/1.4.4 (ops@example.org)' });
+  assert.deepEqual(got[1].headers, { Accept: 'application/json', 'User-Agent': `openGym/${VERSION} (ops@example.org)` });
   assert.deepEqual(Object.keys(got[1]).sort(), ['connectTimeoutMs', 'headers', 'signal']);
   assert.equal(got[1].connectTimeoutMs, 2000);
   assert.ok(got[1].signal instanceof AbortSignal);
@@ -53,7 +55,7 @@ test('operator contact cannot inject headers or arbitrary free text', async () =
   for (const contact of ['', 'x\r\nAuthorization: SECRET', 'a'.repeat(300), '(bad)']) {
     let ua;
     const hub = create({ contact, transport: async (url, options) => { ua = options.headers['User-Agent']; return reply(); } });
-    await query(hub); assert.equal(ua, 'openGym/1.4.4');
+    await query(hub); assert.equal(ua, `openGym/${VERSION}`);
   }
 });
 

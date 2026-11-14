@@ -66,7 +66,7 @@ const capStamps = m => {
 };
 // Optional records retain their field evidence even while deleted. Consumers MUST use
 // visibleOptionalEntries, not read these arrays directly. See DATA_CONTRACTS.md.
-export const OPTIONAL_COLLECTIONS = ['nutritionEntries', 'activities', 'providerLinks']
+export const OPTIONAL_COLLECTIONS = ['nutritionEntries', 'importedActivities', 'providerLinks']
 const optionalKey = k => !['__proto__', 'constructor', 'prototype'].includes(k)
 const optionalTime = v => typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : 0
 const optionalRows = xs => list(xs).filter(x => isMap(x) && typeof x.id === 'string' && x.id.length > 0 && optionalKey(x.id))
@@ -189,15 +189,15 @@ const OWN_MERGE = new Set([
   ...OPTIONAL_COLLECTIONS,
   '_ts', '_rev', '_wid', '_wids', '_unstamped', '_prior', 'active', 'unit', 'unitSet', 'resetAt', 'resetIds', 'deleted', 'edited', 'undone', 'routineOrder',
   'workouts', 'routines', 'customEx', 'equipProfiles', 'gymCards', 'bodyweight', 'measurements', 'favEx',
-  'exWeights', 'balanceOverrides', 'loadKind', 'plates', 'dbLoad', 'dumbbells', 'stackWeights', 'exUnit', 'dayNotes', 'dayPhotos', 'exMerged', 'foodLog',
+  'exWeights', 'balanceOverrides', 'loadKind', 'plates', 'dbLoad', 'dumbbells', 'stackWeights', 'exUnit', 'dayNotes', 'dayPhotos', 'exMerged', 'exGym', 'sessionTargets', 'exMedia', 'recoverySessions', 'gymNotes', 'journalFolders', 'dayForm', 'activities', 'foodLog',
 ]);
 // `modules` (frontend lib/modules.js) per module, as the app stamps it.
-const PER_KEY = new Set(['week', 'dayPlan', 'exNotes', 'barWeights', 'exAliases', 'programmes', 'modules']);
+const PER_KEY = new Set(['week', 'dayPlan', 'exNotes', 'barWeights', 'exAliases', 'exShownName', 'programmes', 'modules']);
 // The maps whose every entry carries its own edit time (sync-merge.js STAMPED_MAPS): merged per
 // key by the app, so never stamped here as a whole setting. dayNotes is a note per day off,
 // dayPhotos a progress photo filed under a day (#557), one entry per photo, foodLog one food
 // eaten (frontend lib/nutrition-diary.js).
-export const STAMPED_MAPS = ['balanceOverrides', 'loadKind', 'plates', 'dbLoad', 'dumbbells', 'stackWeights', 'exUnit', 'dayNotes', 'dayPhotos', 'exMerged', 'foodLog'];
+export const STAMPED_MAPS = ['balanceOverrides', 'loadKind', 'plates', 'dbLoad', 'dumbbells', 'stackWeights', 'exUnit', 'dayNotes', 'dayPhotos', 'exMerged', 'exGym', 'sessionTargets', 'exMedia', 'recoverySessions', 'gymNotes', 'journalFolders', 'dayForm', 'activities', 'foodLog'];
 const ENTRY_META = new Set(['id', '_ts', '_f', '_u']);
 const ENTRY_LISTS = ['routines', 'customEx', 'equipProfiles', 'gymCards', 'workouts'];
 

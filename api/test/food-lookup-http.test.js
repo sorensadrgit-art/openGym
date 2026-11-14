@@ -7,6 +7,7 @@ import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { boundPort } from './helpers.mjs';
+const VERSION = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version;
 
 const barcode = '3017620422003';
 const route = '/api/food-lookup?barcode=' + barcode;
@@ -97,7 +98,7 @@ test('HTTP 200 through cookie and bearer sends no personal headers or data and w
   const sent = h.outbound(); assert.equal(sent.length, 2);
   assert.deepEqual(sent[0], {
     url: 'https://world.openfoodfacts.org/api/v3.6/product/3017620422003?fields=code,product_name,brands,quantity,serving_size,nutrition',
-    method: 'GET', headers: { Accept: 'application/json', 'User-Agent': 'openGym/1.4.4' }, agent: false, lookup: 'function'
+    method: 'GET', headers: { Accept: 'application/json', 'User-Agent': `openGym/${VERSION}` }, agent: false, lookup: 'function'
   });
   assert.doesNotMatch(JSON.stringify(sent), /SECRET|u0|u1|Cookie|Authorization/);
   assert.deepEqual(fs.readFileSync(path.join(h.dataDir, 'state-u0.json')), before);

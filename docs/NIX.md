@@ -88,7 +88,7 @@ nix build .#opengym-frontend         # static site + exercise media → result/s
 nix build .#opengym-api              # API → result/bin/opengym-api
 nix build .#opengym-mcp
 nix run .#opengym                    # full local stack on http://localhost:8080 (see below)
-nix develop                          # dev shell: nodejs_22, git, coreutils
+nix develop                          # dev shell: nodejs_26, git, coreutils
 nix flake check                      # eval check + (on Linux) the VM integration test
 nix build .#nixosTests.opengym       # run just the VM integration test
 ```
@@ -466,6 +466,6 @@ routine update — see the passkey caveat in §4.
 
 - [`docs/SELF_HOSTING.md`](SELF_HOSTING.md) — the general self-hosting guide (Docker but the domain,
   passkey and admin/audit details apply unchanged).
-- [upstream's [docs/MOBILE.md](https://github.com/DuarteSantos8/openGym/blob/main/docs/MOBILE.md)](https://github.com/DuarteSantos8/openGym/blob/main/docs/MOBILE.md) — the stand-alone Android app, an alternative to self-hosting.
+- [`docs/MOBILE.md`](MOBILE.md) — the stand-alone Android app, an alternative to self-hosting.
 - [`docs/DATA_IMPORTS.md`](DATA_IMPORTS.md) — importing from FitNotes/Strong/Hevy/Apple Health.
 - [`NOTICE.md`](../NOTICE.md) — third-party notices, including the exercise-media licence.

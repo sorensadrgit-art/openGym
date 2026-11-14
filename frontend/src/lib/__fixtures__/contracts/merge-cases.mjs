@@ -97,7 +97,7 @@ export function boundaryCases(test, merge, visible) {
 
 // Independent review regressions F2/F4. Realistic profile clocks cover all entry clocks.
 export function reviewCases(test, sync, merge) {
-  for (const key of ['nutritionEntries', 'activities', 'providerLinks']) {
+  for (const key of ['nutritionEntries', 'importedActivities', 'providerLinks']) {
     const row = id => ({ id, name: id, _ts: 10, _f: { name: 10 } })
     test(`F2 ${key}: same-epoch reset expansion hides learned ids and survives stale replay`, () => {
       const server = { workouts: [], _ts: 220, resetAt: 200, resetIds: { [key]: ['a'] },

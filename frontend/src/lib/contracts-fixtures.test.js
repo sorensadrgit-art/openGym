@@ -21,13 +21,13 @@ test('confirmed source fixture retains original ml basis and fingerprint across 
 })
 
 test('canonical fixtures round-trip without changing units, provenance, unknown fields or tombstones', () => {
-  const S = { ...deleted, activities: [activity], providerLinks: [link], workouts: [], unit: 'lb' }
+  const S = { ...deleted, importedActivities: [activity], providerLinks: [link], workouts: [], unit: 'lb' }
   const restored = JSON.parse(stateJson(S))
   expect(restored).toEqual(S)
   const merged = mergeStates(restored, { unit: 'kg', workouts: [], _ts: 1, nutritionEntries: [older] })
   expect(visibleOptionalEntries(merged, 'nutritionEntries')).toEqual([])
-  expect(merged.activities[0].distanceM).toBe(5000)
-  expect(merged.activities[0].contentFingerprint).toBe(activity.contentFingerprint)
+  expect(merged.importedActivities[0].distanceM).toBe(5000)
+  expect(merged.importedActivities[0].contentFingerprint).toBe(activity.contentFingerprint)
   expect(merged.providerLinks[0].serverConnectionId).toBe(link.serverConnectionId)
 })
 test('an older schema can be read without silently filling missing nutrients with zero', () => {
