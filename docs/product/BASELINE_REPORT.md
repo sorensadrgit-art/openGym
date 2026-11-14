@@ -1,5 +1,12 @@
 # Baseline report
 
+> **Later verification, 2026-11-14.** The current `next/integration` head `10fe87b1f` was
+> re-verified on Windows: API, frontend and MCP suites, production build, locale and
+> source-string checks, all three generated-file checks, and a full guest browser smoke.
+> See [integration-head-2026-11-14](baseline-evidence/integration-head-2026-11-14/README.md).
+> GitHub Actions still refuses to run on this fork, so that head is locally verified but not
+> CI verified. The findings below remain the record for commit `68dad18f8`.
+
 ```json
 {
   "commit_sha": "68dad18f8ffaa20e8d69d936f9acd16233098b3d",
