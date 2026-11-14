@@ -92,7 +92,7 @@ The first profile becomes the admin. Once it exists, add `INVITE_ONLY=1` to `.en
 3. In the openGym app: Settings, Account, **Connect to my server**. Enter your `https://` address and the
    code.
 
-More on pairing in [MOBILE.md](./MOBILE.md).
+More on pairing in [MOBILE.md](https://github.com/DuarteSantos8/openGym/blob/main/docs/MOBILE.md).
 
 ## 6. Updating
 

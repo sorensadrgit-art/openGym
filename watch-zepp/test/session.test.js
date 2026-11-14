@@ -1,6 +1,6 @@
 // The Zepp OS watch's session logic (lib/session.js): the Wear OS SessionCoreTest and CodecTest
 // cases on this port, and the same contract files the Wear OS watch reads
-// (frontend/android/wear/src/test/resources): the phone's snapshot parses here, and the events
+// (frontend/src/lib/__fixtures__/watch, the shared watch fixtures): the phone's snapshot parses here, and the events
 // built here are exactly the ones the phone's page applies (frontend/src/lib/watch-sync.wear.test.js).
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
@@ -9,7 +9,7 @@ import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import * as C from '../lib/session.js'
 
-const fixtures = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'frontend', 'android', 'wear', 'src', 'test', 'resources')
+const fixtures = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'frontend', 'src', 'lib', '__fixtures__', 'watch')
 const resource = name => readFileSync(join(fixtures, name), 'utf8')
 
 const set = (w, r, { done = false, at, warmup = false } = {}) => ({ w, r, sec: null, done, warmup, ...(at != null ? { at } : {}) })

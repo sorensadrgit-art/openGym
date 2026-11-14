@@ -14,7 +14,7 @@ No, there are three ways to use it:
 - **Try it:** the [online demo](https://opengym.ch/demo/) runs entirely in your
   browser with example data.
 - **Phone only:** the Android app needs no server and no account; everything stays on the phone.
-  See [MOBILE.md](MOBILE.md).
+  See [MOBILE.md](https://github.com/DuarteSantos8/openGym/blob/main/docs/MOBILE.md).
 - **Your own instance:** `docker compose up` on any machine with Docker gives you sync between
   devices and profiles for friends and family. See [SELF_HOSTING.md](SELF_HOSTING.md).
 
@@ -23,7 +23,7 @@ No, there are three ways to use it:
 Yes: [openGym is in the App Store](https://apps.apple.com/app/id6822275400), for iPhone and Apple
 Watch, in every App Store country. It works on the phone alone or connected to your own server.
 You can also add a self-hosted openGym to your home screen from Safari (a full PWA that works
-offline), or build the app onto your own phone with Xcode; both are in [MOBILE.md](MOBILE.md).
+offline), or build the app onto your own phone with Xcode; both are in [MOBILE.md](https://github.com/DuarteSantos8/openGym/blob/main/docs/MOBILE.md).
 
 ### Is it on Google Play?
 

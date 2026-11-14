@@ -2,7 +2,7 @@
 
 A watch app for Amazfit watches on Zepp OS 3 and later (API level 3.0): Balance and Balance 2,
 GTR 4, GTS 4, Active and Active 2, Active Edge, Cheetah, Falcon, T-Rex 2, 3 and Ultra, Bip 5 and 6,
-and the rest of the family. It is the Wear OS app's twin (docs/WEAR_OS.md): it runs the same session
+and the rest of the family. It is the Wear OS app's twin (upstream's [docs/WEAR_OS.md](https://github.com/DuarteSantos8/openGym/blob/main/docs/WEAR_OS.md)): it runs the same session
 logic, reads the same snapshot and sends the same events, so the phone's page applies a tick from
 an Amazfit exactly like one from an Apple Watch. Zepp OS 1 and 2 watches (GTR 3, GTS 3, Band 7) are
 not supported: their API is too old for the messaging library.
@@ -90,7 +90,8 @@ the watch runs the session on its own while the phone sleeps in a pocket; what i
 when the openGym page next wakes up.
 
 Contract tests: `watch-zepp/test/session.test.js` parses the same `snapshot.json` the Wear OS watch
-parses and builds the same `events.json` (frontend/android/wear/src/test/resources), which
+parses and builds the same `events.json` (frontend/src/lib/__fixtures__/watch, the shared watch
+fixtures; they lived with the Wear OS app before this fork removed it), which
 `watch-sync.wear.test.js` applies on the page. `watch-zepp/test/page.test.js` runs the page against
 stand-ins for the Zepp OS modules on round 480, 466 and 360 and square 390×450 and 320×380 screens:
 a workout from the wrist start to summary, the rest, the menu, nothing drawn outside the screen.
@@ -136,8 +137,9 @@ npx zeus preview          # a QR code for the Zepp app (needs a Zepp developer a
 through module-alias, which looks for the alias in the project's own package.json once npm has
 hoisted it. Without it `zeus build` fails with "Cannot find module 'zeppos-app-utils'".
 
-The watch's strings come from the Wear OS app's (`frontend/android/wear/wear-strings.mjs`, which takes
-them from the app's own locale packs), so run that first when they change, then `npm run strings`.
+The watch's strings come from `watch-zepp/strings-source/values*/strings.xml`: the Wear OS app's
+strings, kept here when this fork removed that app (they were written by `wear-strings.mjs`, which takes
+them from the app's own locale packs). To change one, edit those files, then run `npm run strings`.
 
 ### Versions
 

@@ -109,18 +109,8 @@ describe('keeping the focused field above the keyboard', () => {
   })
 })
 
-describe('the two halves agree', () => {
+describe('the stylesheet takes the passed keyboard height', () => {
   const css = read('../index.css')
-  const activity = read('../../android/app/src/main/java/ch/duartesantos/opengym/MainActivity.java')
-
-  it('the app passes the IME inset as --native-kb and fires the event', () => {
-    expect(activity).toMatch(/WindowInsetsCompat\.Type\.ime\(\)/)
-    expect(activity).toContain("'--native-kb'")
-    expect(activity).toContain("data-native-kb")
-    expect(activity).toContain(NATIVE_KEYBOARD_EVENT)
-    // still only from Android 15 on: older versions resize the window themselves
-    expect(activity).toMatch(/Build\.VERSION\.SDK_INT < 35/)
-  })
 
   it('every sheet stands on the keyboard and the picker takes the larger lift', () => {
     expect(css).toMatch(/:root\[data-native-kb\] \.sheet\{\s*bottom:max\(var\(--picker-keyboard-bottom,0px\),var\(--native-kb,0px\)\);/)

@@ -466,6 +466,6 @@ routine update — see the passkey caveat in §4.
 
 - [`docs/SELF_HOSTING.md`](SELF_HOSTING.md) — the general self-hosting guide (Docker but the domain,
   passkey and admin/audit details apply unchanged).
-- [`docs/MOBILE.md`](MOBILE.md) — the stand-alone Android app, an alternative to self-hosting.
+- [upstream's [docs/MOBILE.md](https://github.com/DuarteSantos8/openGym/blob/main/docs/MOBILE.md)](https://github.com/DuarteSantos8/openGym/blob/main/docs/MOBILE.md) — the stand-alone Android app, an alternative to self-hosting.
 - [`docs/DATA_IMPORTS.md`](DATA_IMPORTS.md) — importing from FitNotes/Strong/Hevy/Apple Health.
 - [`NOTICE.md`](../NOTICE.md) — third-party notices, including the exercise-media licence.

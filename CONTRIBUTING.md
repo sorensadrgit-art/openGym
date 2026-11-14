@@ -7,8 +7,8 @@ to keep it that way: easy to read, easy to self-host.
 
 ```
 frontend/  React + Vite app (src/views, src/components, src/store, src/lib). Builds to static files.
-           android/ and ios/ are the Capacitor shells for the phone apps, ios/ with the Apple
-           Watch app and the widgets (docs/MOBILE.md).
+           This fork is the web app only; the phone and watch apps are upstream's
+           ([docs/MOBILE.md](https://github.com/DuarteSantos8/openGym/blob/main/docs/MOBILE.md)).
 api/       Backend: server.js on plain node:http, three dependencies (@simplewebauthn/server,
            web-push, undici). coach/ is the optional AI coach; openapi.yaml documents every route.
 web/       Multi-stage Dockerfile (builds the frontend, serves it with nginx) and the nginx template.
@@ -85,11 +85,8 @@ it in review.
 </picture>
 </p>
 
-A pull request runs the three test suites and builds and boots both api image targets. Changes to
-the iPhone or Apple Watch app (`frontend/ios`) can run the `iOS` workflow too (build, UI tests and the
-WatchCore tests on a macOS runner); ask in the pull request if a maintainer should start it. Signed
-APKs, TestFlight and App Store builds are made by the maintainer at release time, so if your change
-needs a phone build to be judged, say so and we'll put it on TestFlight or send you an APK.
+A pull request runs the test suites (frontend, api, mcp, the Node-RED example) and builds and boots
+both api image targets, all behind the one `tests-ok` check. This fork builds no phone apps.
 A first-time contributor's workflows wait for a maintainer to approve them, so "no checks yet"
 just means nobody has pressed the button.
 

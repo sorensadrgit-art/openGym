@@ -64,7 +64,7 @@ passkey prompt won't appear. To use openGym from your phone you need a real HTTP
 (You can still open it over LAN in **guest mode**, which stores data only in that browser — or
 turn on **password sign-in**, see [§4](#password-sign-in-optional).)
 
-The standalone mobile app (`docs/MOBILE.md`) sidesteps this entirely for its "connect to my
+The standalone mobile app (upstream's [docs/MOBILE.md](https://github.com/DuarteSantos8/openGym/blob/main/docs/MOBILE.md)) sidesteps this entirely for its "connect to my
 server" mode: instead of a passkey ceremony (impossible from inside its WebView, which never
 runs at your real hostname), it pairs by redeeming a short one-time code — minted from
 Settings → Account → "Pair the mobile app" in an already signed-in browser tab — for a bearer token
@@ -164,7 +164,7 @@ Visit `https://gym.example.com`, create your profile, and add it to your home sc
 #### Phone app and CORS
 
 The browser app is served from your domain, so it never makes a cross-origin request. The
-[phone app](MOBILE.md#connecting-the-app-to-your-own-server) does: its WebView runs at
+[phone app](https://github.com/DuarteSantos8/openGym/blob/main/docs/MOBILE.md#connecting-the-app-to-your-own-server) does: its WebView runs at
 `https://localhost` (Android) or `capacitor://localhost` (iOS), and the browser engine asks your
 server first (a CORS preflight, `OPTIONS`) before every request with a JSON body or a token.
 **openGym answers that preflight itself**: it allows the requesting origin, the methods
@@ -989,7 +989,7 @@ everybody registers again — which is why it pays to settle the domain before o
 
 > On a LAN without certificates there is nothing to configure that makes passkeys work over
 > plain `http://192.168.x.x`: browsers only allow WebAuthn on HTTPS (or `localhost`). Use guest
-> mode, the standalone mobile app (`docs/MOBILE.md`), or put a certificate in front of it.
+> mode, the standalone mobile app (upstream's [docs/MOBILE.md](https://github.com/DuarteSantos8/openGym/blob/main/docs/MOBILE.md)), or put a certificate in front of it.
 
 ## Which passkey providers work
 

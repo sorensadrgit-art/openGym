@@ -308,6 +308,68 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/FoodLookupError' }
 
+
+  /api/addons/food:
+    get:
+      tags: [integrations]
+      operationId: lookupAddonFood
+      summary: Look up one food barcode with Open Food Facts
+      description: |
+        Optional, read-only and disabled by default (`ADDON_NUTRITION=1`).
+        Requires a valid user session; only the barcode is sent to Open Food Facts,
+        never account information or workout history. The barcode must be 8–14
+        decimal digits. Rate-limited to 12 requests per minute per signed-in
+        profile; normalized results are cached for 15 minutes. Nutrition fields
+        reflect third-party published data and may be missing or incorrect.
+      parameters:
+        - in: query
+          name: barcode
+          required: true
+          description: Numeric GTIN (8–14 digits, leading zeros preserved)
+          schema:
+            type: string
+            pattern: '^[0-9]{8,14}$'
+          example: '3017620422003'
+      responses:
+        '200':
+          description: Sanitized Open Food Facts product fields per 100 g or mL, no images.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  food:
+                    type: object
+                    description: |
+                      Product name, barcode, brand, nutrients, and reported allergens. Nutrients
+                      come from the label as Open Food Facts records it; values Open Food Facts
+                      estimated itself are left out (`null`), as is a set stated per serving.
+                    properties:
+                      barcode: { type: string }
+                      name: { type: string }
+                      brand: { type: string }
+                      quantity: { type: string }
+                      serving: { type: string }
+                      grade: { type: [string, 'null'], enum: [A, B, C, D, E, null] }
+                      per100:
+                        type: object
+                        properties:
+                          kcal: { type: [number, 'null'] }
+                          proteinG: { type: [number, 'null'] }
+                          carbohydrateG: { type: [number, 'null'] }
+                          fatG: { type: [number, 'null'] }
+                          sugarG: { type: [number, 'null'] }
+                      basis:
+                        type: [string, 'null']
+                        enum: ['100g', '100ml', null]
+                        description: What `per100` is per, when the record says; `null` for a legacy record.
+                      allergens: { type: array, items: { type: string } }
+                      source: { type: string, const: Open Food Facts }
+        '400': { description: Invalid barcode format }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { description: Add-on not enabled or barcode not found }
+        '429': { description: Per-profile lookup budget exceeded }
+        '502': { description: Open Food Facts unavailable }
   /api/config:
     get:
       tags: [meta]

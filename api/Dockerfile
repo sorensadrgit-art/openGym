@@ -56,6 +56,9 @@ RUN npm ci --omit=dev --omit=optional && npm cache clean --force
 COPY server.js push-messages.js nudge.js nudge-copy.js wrapped.js wrapped-copy.js verify-error.js password.js rate-limit.js passkeys-store.js device-link.js watch-relay.js media.js queue.js sync-stamps.js durable.js admin-socket.js recover.js net-guard.js food-lookup.js ./
 COPY coach ./coach
 COPY integrations ./integrations
+# The fork's opt-in add-ons (ADDON_NUTRITION): server.js imports them, so the image needs them
+# (test/dockerfile-copies.test.js checks every module server.js reaches is copied).
+COPY addons ./addons
 ENV NODE_ENV=production
 ENV PORT=3000
 EXPOSE 3000

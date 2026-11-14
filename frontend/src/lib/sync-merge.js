@@ -36,7 +36,7 @@
  *     is the exception: the edit may have taken away the set the kept weight came from, so it
  *     is the best of the merged history and of the editing copy's own, and the other copy's
  *     can no longer bring a corrected typo back. exNotes, barWeights: key union
- *   - balanceOverrides, loadKind, plates, dbLoad, dumbbells, stackWeights, exUnit, dayNotes, dayPhotos: key union; of a key both
+ *   - balanceOverrides, loadKind, plates, dbLoad, dumbbells, stackWeights, exUnit, dayNotes, dayPhotos, foodLog: key union; of a key both
  *     have, the entry set last by its own `_ts`, a clear included (mergeStampedMap), the newer
  *     copy's on a tie. For plates and dumbbells the key is the unit, so the inventory of one unit
  *     is kept whole, as last edited; for dayNotes the key is the date, so each day's note is its own
@@ -90,7 +90,8 @@ const list = v => (Array.isArray(v) ? v : [])
 // The maps whose every entry carries its own edit time (mergeStampedMap). dayNotes is a day's
 // note on a day off (lib/day-notes.js), one entry per date.
 // dayPhotos is a progress photo filed under a day (lib/day-photos.js), one entry per photo.
-export const STAMPED_MAPS = ['balanceOverrides', 'loadKind', 'plates', 'dbLoad', 'dumbbells', 'stackWeights', 'exUnit', 'dayNotes', 'dayPhotos', 'exMerged']
+// foodLog is the food diary (lib/nutrition-diary.js), one entry per food eaten.
+export const STAMPED_MAPS = ['balanceOverrides', 'loadKind', 'plates', 'dbLoad', 'dumbbells', 'stackWeights', 'exUnit', 'dayNotes', 'dayPhotos', 'exMerged', 'foodLog']
 
 /** The copy with the later `_ts`; on a tie the first argument (callers pass local first). */
 export const newerOf = (a, b) => ((b?._ts || 0) > (a?._ts || 0) ? b : a)
@@ -839,7 +840,7 @@ const OWN_MERGE = new Set([
   ...OPTIONAL_COLLECTIONS,
   '_ts', '_rev', '_wid', '_wids', '_unstamped', '_prior', 'active', 'unit', 'unitSet', 'resetAt', 'resetIds', 'deleted', 'edited', 'undone', 'routineOrder',
   'workouts', 'routines', 'customEx', 'equipProfiles', 'gymCards', 'bodyweight', 'measurements', 'favEx',
-  'exWeights', 'balanceOverrides', 'loadKind', 'plates', 'dbLoad', 'dumbbells', 'stackWeights', 'exUnit', 'dayNotes', 'dayPhotos', 'exMerged',
+  'exWeights', 'balanceOverrides', 'loadKind', 'plates', 'dbLoad', 'dumbbells', 'stackWeights', 'exUnit', 'dayNotes', 'dayPhotos', 'exMerged', 'foodLog',
 ])
 // Stamped per key instead of whole: one day of the plan, one exercise's note or bar, one programme
 // (lib/programmes.js; the running one, `programme`, is a plain setting).
