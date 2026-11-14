@@ -22,7 +22,12 @@ const freePort = () => new Promise(res => { const s = createServer().listen(0, '
 const SECRET = newSecret()
 const port = await freePort()
 const userDir = mkdtempSync(join(tmpdir(), 'og-nodered-'))
-writeFileSync(join(userDir, 'flows.json'), readFileSync(join(here, '..', 'opengym-webhook-flow.json')))
+// The generated flow, with one change: the demo handler throws the first time it sees
+// evt_e2e_flaky, so the run can show that a failed handler's delivery is retried, not lost.
+const flow = JSON.parse(readFileSync(join(here, '..', 'opengym-webhook-flow.json'), 'utf8'))
+const handler = flow.find(n => n.id === 'og_handle')
+handler.func = "if (msg.opengym.id === 'evt_e2e_flaky' && !context.get('failedOnce')) { context.set('failedOnce', true); throw new Error('handler failed (e2e)'); }\n" + handler.func
+writeFileSync(join(userDir, 'flows.json'), JSON.stringify(flow))
 
 const child = spawn(process.execPath, [RED, '--userDir', userDir, '--port', String(port), 'flows.json'], {
   env: { ...process.env, OPENGYM_WEBHOOK_SECRET: SECRET, NODE_RED_ENABLE_PROJECTS: 'false' },
@@ -57,6 +62,11 @@ const big = JSON.stringify({ ...JSON.parse(body('evt_big')), pad: 'x'.repeat(70 
 const cases = [
   ['valid workout.finished', () => post(b1, signature(SECRET, b1)), 200, /"handled":"workout.finished"/],
   ['same delivery again (openGym retry, new t)', () => post(b1, signature(SECRET, b1, T + 2)), 200, /"duplicate":true/],
+  // Recorded as seen only after the handler finished: a handler that threw answers 500 and
+  // openGym's retry (same id) is handled, not dropped as a duplicate (Codex review on #8).
+  ['handler throws: 500, so openGym retries', () => { const b = body('evt_e2e_flaky'); return post(b, signature(SECRET, b)) }, 500, /receiver error/],
+  ['the retry after a failed handler is handled', () => { const b = body('evt_e2e_flaky'); return post(b, signature(SECRET, b, T + 5)) }, 200, /"handled":"workout.finished"/],
+  ['and only then is the next copy a duplicate', () => { const b = body('evt_e2e_flaky'); return post(b, signature(SECRET, b, T + 9)) }, 200, /"duplicate":true/],
   ['valid weighin.logged', () => { const b = body('evt_e2e_2', 'weighin.logged'); return post(b, signature(SECRET, b)) }, 200, /"handled":"weighin.logged"/],
   // A type openGym may add later: acknowledged (a 4xx would be a final failure there), never handled.
   ['authentic but unknown event type: 200, not handled', () => { const b = JSON.stringify({ ...JSON.parse(body('evt_e2e_future')), type: 'workout.deleted' }); return post(b, signature(SECRET, b)) }, 200, /^\{"ok":true,"ignored":true\}$/],

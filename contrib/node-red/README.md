@@ -63,7 +63,9 @@ Optional environment variables:
    200 `{"ok":true,"ignored":true}` and goes nowhere: a 400 would be a final failure in openGym
    and mark the webhook *Needs attention*.
 7. The `id` from the signed body has not been seen in the last twice-the-tolerance. If it has: 200
-   `{"ok":true,"duplicate":true}` and nothing runs.
+   `{"ok":true,"duplicate":true}` and nothing runs. An id counts as seen only once the handler has
+   finished (the *Record as delivered* node, after it). If the handler throws, openGym gets a 500
+   and its retry, with the same id, runs the handler again instead of being dropped as a duplicate.
 
 `X-OpenGym-Delivery` carries the same id but is not signed, so it is never used. Every refusal
 answers a fixed body (`{"error":"unauthorized"}` and so on); the reason goes to the Node-RED log
@@ -95,7 +97,8 @@ after five minutes. The secret itself is not printed.
 
 ## Limits, said plainly
 
-- **Replay memory resets on restart.** Seen ids live in the node's context, in memory by default. A
+- **Replay memory resets on restart.** Seen ids live in the flow's context (the check and *Record
+  as delivered* share it), in memory by default. A
   delivery captured in the last few minutes could be accepted once more right after a restart (its
   timestamp still has to be inside the window). To keep them across restarts, give Node-RED a
   persistent context store in `settings.js`:
@@ -106,6 +109,8 @@ after five minutes. The secret itself is not printed.
   the size in front of Node-RED, for example nginx `client_max_body_size 64k;` on this location.
 - **The signature proves who sent it, not secrecy.** Over plain http the payload (workout names,
   weights) crosses the network readable. Use https outside your home network.
+- **A handler that does its work and then throws runs again on the retry.** Make the handler's
+  effects safe to repeat (keyed by `msg.opengym.id`) if a second run would matter.
 - **Clocks.** The timestamp check needs both clocks roughly right (NTP). A Node-RED clock off by more
   than five minutes refuses every delivery.
 - At most 10,000 ids are remembered; past that the oldest go first. Only authentic deliveries are
@@ -129,9 +134,9 @@ after five minutes. The secret itself is not printed.
 
 ```bash
 cd contrib/node-red
-npm test          # 19 tests: the check and the flow, signed with openGym's own api/integrations/crypto.js
+npm test          # 22 tests: the check and the flow, signed with openGym's own api/integrations/crypto.js
 npm run check     # the JSON matches verify.js
-npm run e2e       # installs Node-RED 5.0.9 from e2e/package-lock.json, runs the flow, sends 13 kinds of request
+npm run e2e       # installs Node-RED 5.0.9 from e2e/package-lock.json, runs the flow, sends 16 kinds of request
 ```
 
 After changing `verify.js` or `build-flow.mjs`, run `node build-flow.mjs` and commit the JSON.

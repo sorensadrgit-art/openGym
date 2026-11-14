@@ -32,24 +32,28 @@ test('wired as documented: raw POST in, crypto lib, two outputs, every failure a
   assert.deepEqual(byId.og_in.wires, [['og_verify']])
   assert.deepEqual(byId.og_verify.libs, [{ var: 'crypto', module: 'crypto' }])
   assert.deepEqual(byId.og_verify.wires, [['og_handle'], ['og_reply']])
-  assert.ok(byId.og_handle.wires[0].includes('og_reply'))
-  assert.deepEqual(byId.og_catch.scope.sort(), ['og_handle', 'og_verify'])
+  // The answer to a handled delivery goes out only after it is recorded (og_done).
+  assert.ok(byId.og_handle.wires[0].includes('og_done'))
+  assert.ok(!byId.og_handle.wires[0].includes('og_reply'))
+  assert.deepEqual(byId.og_done.wires, [['og_reply']])
+  assert.deepEqual(byId.og_catch.scope.sort(), ['og_done', 'og_handle', 'og_verify'])
   assert.deepEqual(byId.og_failed.wires, [['og_reply']])
   assert.equal(byId.og_reply.type, 'http response')
   for (const n of flow) if (n.type !== 'tab') assert.equal(n.z, 'og_tab', n.id)
 })
 
 /** The Function node's code in a sandbox like Node-RED's 10-function.js gives it. */
-function functionNode(code, { env = {} } = {}) {
+function functionNode(code, { env = {}, flowStore = {} } = {}) {
   const store = {}, logs = []
   const sandbox = {
     Buffer, Date, console, crypto,
     env: { get: k => env[k] },
     context: { get: k => store[k], set: (k, v) => { store[k] = v } },
+    flow: { get: k => flowStore[k], set: (k, v) => { flowStore[k] = v } },
     node: { status: () => {}, warn: m => logs.push(['warn', m]), error: m => logs.push(['error', m]) },
   }
   const fn = vm.runInNewContext(`(async function (msg) {\n${code}\n})`, sandbox)
-  return { run: msg => fn(msg), store, logs }
+  return { run: msg => fn(msg), store, flowStore, logs }
 }
 
 // Objects made inside the vm have its own prototypes; compare their JSON.
@@ -60,15 +64,17 @@ const body = JSON.stringify(envelope({ id: 'evt_flow1', type: 'workout.finished'
 const msgFor = (raw, header) => ({ payload: Buffer.from(raw), req: { headers: { 'x-opengym-signature': header } } })
 
 test('the verify node: authentic goes to output 1, a forgery or a repeat to output 2 with a fixed body', async () => {
-  const node = functionNode(byId.og_verify.func, { env: { [SECRET_ENV]: SECRET } })
+  const flowStore = {}
+  const node = functionNode(byId.og_verify.func, { env: { [SECRET_ENV]: SECRET }, flowStore })
   const [ok, refused] = await node.run(msgFor(body, signature(SECRET, body)))
   assert.equal(refused, null)
   assert.equal(ok.opengym.id, 'evt_flow1')
+  await functionNode(byId.og_done.func, { flowStore }).run(ok)
   const [, dup] = await node.run(msgFor(body, signature(SECRET, body)))
   assert.deepEqual(plain([dup.statusCode, dup.payload]), [200, { ok: true, duplicate: true }])
   const [, bad] = await node.run(msgFor(body, signature(newSecret(), body)))
   assert.deepEqual(plain([bad.statusCode, bad.payload]), [401, { error: 'unauthorized' }])
-  assert.deepEqual(plain(Object.keys(node.store.opengymSeen)), ['k:evt_flow1'])
+  assert.deepEqual(plain(Object.keys(flowStore.opengymSeen)), ['k:evt_flow1'])
   assert.ok(node.logs.some(([lvl, m]) => lvl === 'warn' && /refused \(401\)/.test(m)))
   assert.ok(!JSON.stringify(node.logs).includes(SECRET), 'the secret is never logged')
 })
@@ -85,4 +91,24 @@ test('the demo handler only describes the event and answers 200', async () => {
   const out = await node.run({ opengym: JSON.parse(body) })
   assert.deepEqual(plain([out.statusCode, out.payload]), [200, { ok: true, handled: 'workout.finished' }])
   assert.match(out.summary, /^Workout finished: Test workout, 3 sets$/)
+})
+
+test('a delivery is recorded only after the handler: verify leaves it out, og_done puts it in', async () => {
+  const flowStore = {}
+  const verify = functionNode(byId.og_verify.func, { env: { [SECRET_ENV]: SECRET }, flowStore })
+  const done = functionNode(byId.og_done.func, { flowStore })
+  const t = Math.floor(Date.now() / 1000)
+  const first = await verify.run(msgFor(body, signature(SECRET, body, t)))
+  assert.ok(first[0], 'authentic: on to the handler')
+  assert.equal(Object.keys(flowStore.opengymSeen || {}).length, 0, 'not recorded before the handler ran')
+  // The handler threw (og_done never ran): the retry is handled again.
+  const retry = await verify.run(msgFor(body, signature(SECRET, body, t + 30)))
+  assert.ok(retry[0], 'retry after a failed handler is handled, not a duplicate')
+  // The handler finished: og_done records it and passes the answer on, without its bookkeeping.
+  const out = await done.run(retry[0])
+  assert.equal(out._opengymRemember, undefined)
+  assert.equal(Object.keys(flowStore.opengymSeen).length, 1)
+  const again = await verify.run(msgFor(body, signature(SECRET, body, t + 60)))
+  assert.equal(again[0], null)
+  assert.deepEqual(plain(again[1].payload), { ok: true, duplicate: true })
 })
