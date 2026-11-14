@@ -85,7 +85,9 @@ const PASSWORD_LOGIN = /^(1|true|yes|on)$/i.test(process.env.PASSWORD_LOGIN || '
 // sent to that service unless a signed-in person explicitly searches a barcode.
 const NUTRITION_ON = /^(1|true|yes|on)$/i.test(process.env.ADDON_NUTRITION || '');
 const FOOD_RATE = createWindow({ max: 12, windowMs: 60000 });
-const lookupFood = createFoodLookup({ userAgent: process.env.OPEN_FOOD_FACTS_USER_AGENT || undefined });
+// The Extension Lab's lookup (main branch): its factory RETURNS the lookup function itself,
+// unlike the Nutrition module's factory below which returns an object with .lookup().
+const lookupFood = createAddonFoodLookup({ userAgent: process.env.OPEN_FOOD_FACTS_USER_AGENT || undefined });
 // The language the sign-in screen, and every profile that never picked one, starts in (#303) —
 // for an instance whose people share a language. Only a tag's shape is checked here; the app
 // matches it against the languages it has and ignores one it does not know. Unset, it is left
