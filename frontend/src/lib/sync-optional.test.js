@@ -26,7 +26,7 @@ test('deliberate older backup restore revives only live backup records and resta
   const out = sync.mergeStates(backup, current)
   expect(sync.visibleOptionalEntries(out, 'nutritionEntries').map(x => x.name)).toEqual(['old'])
 })
-for (const key of ['activities', 'providerLinks']) test(`${key}: store stamping, add/edit/delete and API merge plumbing`, async () => {
+for (const key of ['importedActivities', 'providerLinks']) test(`${key}: store stamping, add/edit/delete and API merge plumbing`, async () => {
   const api = await import('../../../api/sync-stamps.js')
   const prev = { [key]: [{ id: 'a', schemaVersion: 1, label: 'old', _ts: 10, _f: { label: 10, schemaVersion: 10 } }] }
   const changed = structuredClone(prev); changed[key][0].label = 'new'; changed[key].push({ id: 'b', schemaVersion: 1 })

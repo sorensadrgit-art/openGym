@@ -721,7 +721,7 @@ function applyDeletions(S, deleted) {
 // merge of their own are not stamped here; a field nobody stamped follows the newer copy, as before.
 // Optional records retain their field evidence even while deleted. Consumers MUST use
 // visibleOptionalEntries, not read these arrays directly. See DATA_CONTRACTS.md.
-export const OPTIONAL_COLLECTIONS = ['nutritionEntries', 'activities', 'providerLinks']
+export const OPTIONAL_COLLECTIONS = ['nutritionEntries', 'importedActivities', 'providerLinks']
 const optionalKey = k => !['__proto__', 'constructor', 'prototype'].includes(k)
 const optionalTime = v => typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : 0
 const optionalRows = xs => list(xs).filter(x => isMap(x) && typeof x.id === 'string' && x.id.length > 0 && optionalKey(x.id))

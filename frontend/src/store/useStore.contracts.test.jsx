@@ -49,7 +49,7 @@ test('a complete legacy profile survives the real store load and serialization b
 
 import { api } from '../lib/api.js'
 import { stampPut } from '../../../api/sync-stamps.js'
-for (const key of ['nutritionEntries', 'activities', 'providerLinks']) test(`F2 store ${key}: server-only reset ids are learned within the same epoch`, async () => {
+for (const key of ['nutritionEntries', 'importedActivities', 'providerLinks']) test(`F2 store ${key}: server-only reset ids are learned within the same epoch`, async () => {
   vi.useFakeTimers()
   const row = id => ({ id, name: id, _ts: 10, _f: { name: 10 } })
   let resolve

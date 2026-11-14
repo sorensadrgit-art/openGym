@@ -26,11 +26,11 @@ test('HTTP optional profile compatibility: PUT, 409, old writers, tombstones, re
   const get = async () => (await fetch(base + '/api/data', { headers })).json()
   const put = async body => { const r = await fetch(base + '/api/data', { method: 'PUT', headers, body: JSON.stringify(body) }); return { status: r.status, body: await r.json() } }
   await t.test('initial unstamped PUT and a later stamped merge preserve zero-stamp fields', async () => {
-    await put({ state: { workouts: [], activities: [{ id: 'shared', distanceM: 5000 }] } })
+    await put({ state: { workouts: [], importedActivities: [{ id: 'shared', distanceM: 5000 }] } })
     const current = await get()
-    assert.equal(current.state.activities[0].distanceM, 5000)
-    await put({ state: { workouts: [], activities: [{ id: 'shared', label: 'Run' }] }, baseRev: current.rev, stamped: true })
-    const saved = (await get()).state.activities[0]
+    assert.equal(current.state.importedActivities[0].distanceM, 5000)
+    await put({ state: { workouts: [], importedActivities: [{ id: 'shared', label: 'Run' }] }, baseRev: current.rev, stamped: true })
+    const saved = (await get()).state.importedActivities[0]
     assert.equal(saved.distanceM, 5000); assert.equal(saved.label, 'Run')
   })
   const row = { id: 'a', schemaVersion: 1, grams: 100, futureField: 42, _ts: 10, _f: { schemaVersion: 10, grams: 10, futureField: 10 } }
@@ -81,7 +81,7 @@ test('HTTP optional profile compatibility: PUT, 409, old writers, tombstones, re
   })
 
 
-  for (const key of ['nutritionEntries', 'activities', 'providerLinks']) {
+  for (const key of ['nutritionEntries', 'importedActivities', 'providerLinks']) {
     await t.test(`F2 HTTP ${key}: unstamped follow-up expands resetIds without changing epoch`, async () => {
       const epoch = Date.now() + 2000
       let current = await get()
@@ -112,7 +112,7 @@ test('HTTP optional profile compatibility: PUT, 409, old writers, tombstones, re
     })
   }
 
-  for (const key of ['nutritionEntries', 'activities', 'providerLinks']) await t.test(`no-base HTTP ${key}: edits both lexical directions while retaining omissions and deletions`, async () => {
+  for (const key of ['nutritionEntries', 'importedActivities', 'providerLinks']) await t.test(`no-base HTTP ${key}: edits both lexical directions while retaining omissions and deletions`, async () => {
     let current = await get()
     const epoch = current.state.resetAt || 0
     const id = 'no-base'

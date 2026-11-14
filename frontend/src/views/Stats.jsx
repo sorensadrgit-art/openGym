@@ -943,7 +943,7 @@ export default function Stats() {
     <div className={'kpis' + (bodyOn ? '' : ' two')} data-tour="stats-tiles">
       <div className="tile"><div className="l">{t('Workouts')}</div><div className="v">{workouts.length}</div></div>
       <div className="tile"><div className="l">{t('This month')}</div><div className="v">{monthW}</div></div>
-      {bodyOn && <div className="tile"><div className="l">{t('Weight 30d')}</div><div className="v" style={{ color: bwDelta30 === null ? 'inherit' : bwDeltaColor(bwDelta30, (lastBW(S) || {}).w || 0) }}>{bwDelta30 === null ? '–' : (bwDelta30 > 0 ? '+' : '') + fmtNum(bwDelta30) + ' ' + S.unit}</div></div>}
+      {bodyOn && <div className="tile"><div className="l">{t('Weight 30d')}</div><div className="v" style={{ color: bwDelta30 === null ? 'inherit' : bwDeltaColor(bwDelta30, (lastBW(S) || {}).w || 0, true) }}>{bwDelta30 === null ? '–' : (bwDelta30 > 0 ? '+' : '') + fmtNum(bwDelta30) + ' ' + S.unit}</div></div>}
       {/* Everything ever lifted (Discord): imports included, warm-ups only when the profile
           counts them (#719). */}
       {/* With the rest of the all-time sums under it (Discord, 10-22), and a size to picture. */}

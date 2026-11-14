@@ -543,7 +543,7 @@ function WeighIns() {
         <div className="row between" style={{ margin: '16px 2px 4px', gap: 8 }}>
           <span className="small" style={{ fontWeight: 600 }}>{t('Week of {0}', fmtDate(w.key))}</span>
           <span className="small row" style={{ gap: 8 }}>
-            {moved && <span className="row" style={{ gap: 2, fontWeight: 500, color: bwDeltaColor(w.delta, w.avg) }}>
+            {moved && <span className="row" style={{ gap: 2, fontWeight: 500, color: bwDeltaColor(w.delta, w.avg, true) }}>
               <Icon name={w.delta > 0 ? 'arrowUp' : 'arrowDown'} style={{ fontSize: 'var(--fs-caption)' }} />{fmtNum(Math.abs(w.delta))}
             </span>}
             <span className="muted" style={{ whiteSpace: 'nowrap' }}>{t('Average {0}', fmtNum(w.avg) + ' ' + st.unit)}</span>
@@ -941,7 +941,7 @@ export function bwDeltaColor(delta, currentW, ink = false) {
   if (!delta) return 'var(--label-2)'
   if (!S().targetW) return 'var(--label)'
   const up = S().targetW > currentW
-  return (delta > 0) === up ? 'var(--acc-ink)' : 'var(--red-ink)'
+  return (delta > 0) === up ? (ink ? 'var(--acc-ink)' : 'var(--acc)') : (ink ? 'var(--red-ink)' : 'var(--red)')
 }
 function GoalSheet({ close }) {
   const st = S()
