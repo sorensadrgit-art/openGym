@@ -4,8 +4,7 @@
 //   setting/i18n/*.po       the settings page inside the Zepp phone app (the phone's language)
 //   page/i18n/*.po          one word per watch language: which of ours it is, before the phone said
 // The watch says what the Wear OS watch says, so its words come from there
-// (strings-source/values*/strings.xml: the Wear OS app's strings, kept here when this fork dropped
-// the Android app; originally written by frontend/android/wear/wear-strings.mjs from the
+// (frontend/android/wear/src/main/res/values*/strings.xml, written by wear-strings.mjs from the
 // app's own locale packs and the Apple Watch's strings); the few only this watch says are below.
 // Run it after changing any of them, and commit what it writes:
 //
@@ -17,7 +16,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const here = dirname(fileURLToPath(import.meta.url))
-const wearRes = join(here, 'strings-source')
+const wearRes = join(here, '..', 'frontend', 'android', 'wear', 'src', 'main', 'res')
 
 // the app's language → [Wear OS values folder, Zepp locale]
 export const LANGS = {
@@ -158,7 +157,7 @@ function unescapeRes (s) {
 }
 export function readWear (folder) {
   const file = join(wearRes, folder, 'strings.xml')
-  if (!existsSync(file)) throw new Error('missing ' + file + ' (watch-zepp/strings-source holds one strings.xml per language)')
+  if (!existsSync(file)) throw new Error('missing ' + file + ': run frontend/android/wear/wear-strings.mjs first')
   const out = {}
   for (const m of readFileSync(file, 'utf8').matchAll(/<string name="([a-z_]+)">([\s\S]*?)<\/string>/g)) out[m[1]] = unescapeRes(m[2])
   return out

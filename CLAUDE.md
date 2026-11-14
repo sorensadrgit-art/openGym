@@ -7,19 +7,19 @@ For people, the same map with diagrams is [docs/ARCHITECTURE.md](docs/ARCHITECTU
 
 openGym is a self-hosted gym and body-weight tracker. Two containers (`api` + `web`) plus a
 `./data` folder the user owns: no third-party account, no telemetry. Passkey (WebAuthn) login,
-installable as a PWA. (Upstream also ships Capacitor apps for Android and iPhone; this fork is the
-web app only.) License: AGPL-3.0-or-later; the exercise
+installable as a PWA, and Capacitor apps for Android and iPhone (with an Apple Watch app and
+widgets) that work on their own or synced to a server. License: AGPL-3.0-or-later; the exercise
 media are licensed separately (NOTICE.md).
 
 ## Project layout
 
 ```
 frontend/   React 19 + Vite app (src/views, src/components, src/store, src/lib, src/sheets.jsx).
-            This fork is the web app (and PWA) only: the Capacitor Android/iPhone shells, the
-            Apple Watch, Wear OS and Garmin apps were removed (2026-11-13). Phone code paths
-            (`MOBILE`, the Capacitor plugin imports in src/lib) are still in the source, dormant
-            on the web; removing them is a separate, planned change. The watch protocol's shared
-            fixtures are in src/lib/__fixtures__/watch (watch-zepp/ tests against them too).
+            android/ + ios/ are the Capacitor shells (docs/MOBILE.md); ios/ also holds the watch
+            app (Watch, WatchCore, WatchWidgets), the widgets and the animation-pack downloader.
+            android/wear is the Wear OS watch app (Kotlin, Compose; docs/WEAR_OS.md), on the same
+            watch protocol as the Apple Watch (lib/watch-sync.js). garmin/ is the Garmin Connect IQ
+            watch app (Monkey C; docs/GARMIN.md), on a cut-down snapshot (lib/garmin-snapshot.js).
 api/        Backend: server.js (plain node:http) plus small testable modules beside it.
             coach/ is the optional AI coach; coach/core/ is shared with the phone apps.
             openapi.yaml documents every route.
@@ -59,15 +59,16 @@ node scripts/build-api-docs.mjs --check
 
 # Builds
 cd frontend && npm run build
+cd frontend && npm run build:mobile   # VITE_MOBILE build + 180 px media from catalogue/media + cap sync
 ```
 
 There is no linter/formatter config and no TypeScript; match the existing style by hand.
 
 GitHub (`github.com/DuarteSantos8/openGym`) is the home of the project; `.github/workflows/mirror.yml`
 pushes `main` and `v*` tags to the GitLab mirror (fast-forward only, never push or merge there).
-Pull requests are gated by `.github/workflows/test.yml` (frontend, api, mcp, catalogue, images,
-nodered, all behind the single `tests-ok` check). Upstream-only jobs (image publishing, Pages, the
-CLA bot) carry a `github.repository == 'DuarteSantos8/openGym'` guard and skip on this fork.
+Pull requests are gated by `.github/workflows/test.yml`; `ios.yml` compiles the iPhone app on a Mac
+runner. Release packages (APK, Play bundle, App Store IPA) are built and signed on the release
+machine, never in CI (see "Exercise media" below and docs/APP_STORES.md).
 
 ## Architecture
 
@@ -173,8 +174,8 @@ which passkeys require). `web/nginx.conf.template` is rendered from env vars at 
 
 The stills and animations are licensed from Gym visual, not AGPL. Only 180 px files may be in the
 repository, CI, the web image, the demo or a self-hosted server (`scripts/catalogue/check-media.mjs`
-enforces it). Upstream keeps larger sizes only inside its phone-app packages; this fork ships none,
-so no media larger than 180 px belongs anywhere here. Never commit, upload or serve anything larger, and
+enforces it). Larger sizes exist only inside the APK and store packages, built on the release
+machine, or as Apple-hosted / Play asset packs. Never commit, upload or serve anything larger, and
 never feed the media to an AI tool.
 
 ## Guidelines from CONTRIBUTING.md worth knowing before changing code

@@ -1,17 +1,17 @@
 // @vitest-environment happy-dom
-// The watches speak one protocol over different wires. The two files in __fixtures__/watch/ are
-// the shared watch contract (the Zepp watch app in watch-zepp/ is written against them too; they
-// were the Wear OS app's fixtures before the native apps left this fork):
-//   snapshot.json  what the page sends: built here by buildSnapshot.
-//                  Changes on purpose: UPDATE_WEAR_FIXTURES=1 npx vitest run …
-//   events.json    what a watch sends, applied here through the page's own applyEvents.
+// The Wear OS watch (android/wear) speaks the Apple Watch's protocol over another wire. The two
+// files below are the contract between this page and its Kotlin code, both read by both sides:
+//   snapshot.json  what the phone sends: built here by buildSnapshot, parsed by the watch's
+//                  CodecTest (Model.kt). Changes on purpose: UPDATE_WEAR_FIXTURES=1 npx vitest run …
+//   events.json    what the watch sends: built by the watch's SessionCore (SessionCoreTest compares),
+//                  applied here through the page's own applyEvents.
 // And Android counts as a phone with a watch link, the iPhone still does, the web does not.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const fixtures = join(dirname(fileURLToPath(import.meta.url)), '__fixtures__', 'watch')
+const fixtures = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'android', 'wear', 'src', 'test', 'resources')
 
 const mobile = vi.hoisted(() => ({ platform: 'android', status: null }))
 vi.mock('@capacitor/core', () => ({ registerPlugin: () => ({ status: (...a) => mobile.status(...a) }) }))
@@ -38,7 +38,7 @@ beforeEach(() => { localStorage.clear(); _resetWatchSync(); mobile.platform = 'a
 afterEach(() => _resetWatchSync())
 
 describe('the snapshot the Wear OS watch parses', () => {
-  it('is the shared watch fixture', () => {
+  it('is the fixture its Kotlin test reads', () => {
     const snap = buildSnapshot(state(), { timer: { endsAt: 1761743000000 }, activeAt: 1761742950000 })
     snap.settings = { health: false, restHaptics: true, crown: 'reps', show: { hr: true, last: true, next: true }, lang: 'de', weighIn: false }
     snap.streak = streakFor(state(), '2026-10-29')

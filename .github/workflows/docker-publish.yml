@@ -25,6 +25,8 @@ on:
       - 'helm/**'
       - 'kubernetes/**'
       - 'contrib/**'
+      - 'frontend/ios/**'
+      - 'frontend/android/**'
   release:
     types: [published]
   workflow_dispatch:

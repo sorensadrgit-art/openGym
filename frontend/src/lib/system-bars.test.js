@@ -62,8 +62,14 @@ describe('system bars follow the theme on Android', () => {
     await expect(setSystemBarsLight(true)).resolves.toBeUndefined()
   })
 
-  it('the app sends every resolved theme', () => {
+  it('the app sends every resolved theme, and the activity registers the plugin', () => {
     const app = readFileSync(new URL('../App.jsx', import.meta.url), 'utf8')
     expect(app).toMatch(/function applyPrefs[\s\S]*?setSystemBarsLight\(de\.dataset\.theme === 'light'\)/)
+    const dir = '../../android/app/src/main/java/ch/duartesantos/opengym/'
+    const activity = readFileSync(new URL(dir + 'MainActivity.java', import.meta.url), 'utf8')
+    const plugin = readFileSync(new URL(dir + 'BarIconsPlugin.java', import.meta.url), 'utf8')
+    expect(activity).toMatch(/registerPlugin\(BarIconsPlugin\.class\);[\s\S]*super\.onCreate/)
+    expect(plugin).toContain('@CapacitorPlugin(name = "BarIcons")')
+    expect(plugin).toMatch(/setAppearanceLightStatusBars\(light\)/)
   })
 })

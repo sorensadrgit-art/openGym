@@ -204,14 +204,21 @@ variable. The [self-hosting guide](docs/SELF_HOSTING.md) covers every option in 
 
 </details>
 
-## Phone and watch apps
+## Phone app
 
-This fork is the **web app only**: open it in any browser, or install it from the browser as a PWA
-on your phone's home screen. The Capacitor phone apps (iPhone, Android, Google Play) and the Apple
-Watch, Wear OS and Garmin apps are upstream's, at
-[DuarteSantos8/openGym](https://github.com/DuarteSantos8/openGym), and are not built from here.
-The Amazfit (Zepp OS) watch app stays: it talks to your openGym server, not to a phone app
-([docs/ZEPP_OS.md](docs/ZEPP_OS.md)).
+The same codebase builds the phone apps with Capacitor. Use them on their own (everything stays on
+the phone, no account) or connect them to your server and sync.
+
+| | Get it |
+|---|---|
+| **iPhone and iPad**, with the **Apple Watch** app | The [App Store](https://apps.apple.com/app/id6822275400), in every App Store country |
+| **Android** | The signed APK from the [latest release](https://github.com/DuarteSantos8/openGym/releases/latest) or [opengym.ch](https://opengym.ch), in three sizes: **Standard** (`openGym-X.Y.Z.apk`, animations at 180 px, about 315 MB), **Plus** (`openGym-Plus-X.Y.Z.apk`, 240 px, about 424 MB) and **HD** (`openGym-HD-X.Y.Z.apk`, 360 px, about 760 MB). It updates itself and stays the kind you picked |
+| **Google Play** | In closed testing: Google wants 12 testers for 14 days before it lets everyone in. Join the [tester group](https://groups.google.com/g/opengym-testers/about), then [opt in](https://play.google.com/apps/testing/ch.duartesantos.opengym). It installs right over the APK and keeps your data |
+| **Wear OS watch** (beta) | Rides along with the Google Play test: once Google's watch review is done, "openGym Beta" shows up in the Play Store on your Galaxy Watch, Pixel Watch and friends. Details: [docs/WEAR_OS.md](docs/WEAR_OS.md) |
+
+Every APK sits next to its `.sha256`. The APK and the Play app share one signing key, so you can
+switch between them (or between Standard, Plus and HD) without losing data. Details, building it
+yourself and connecting to your server: [docs/MOBILE.md](docs/MOBILE.md).
 
 ## How it works
 
@@ -278,6 +285,7 @@ The [documentation index](docs/README.md) sorts every guide by who it's for. The
 |---|---|
 | Get a quick answer | [FAQ](docs/FAQ.md) |
 | Set up my own instance | [Self-hosting](docs/SELF_HOSTING.md) |
+| Use the Android or iPhone app | [Phone app](docs/MOBILE.md) |
 | Bring my history from another app | [Importing data](docs/DATA_IMPORTS.md) |
 | Turn on the AI coach | [AI coach](docs/AI_COACH.md) |
 | Contribute code | [Contributing](CONTRIBUTING.md) |

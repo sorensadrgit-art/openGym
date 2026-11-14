@@ -1,12 +1,8 @@
 # How openGym fits together
 
-> **This fork is the web app only.** The Capacitor phone apps and the Apple Watch, Wear OS and
-> Garmin apps described below were removed here (2026-11-13); they live on upstream. The diagrams
-> are upstream's and still show them.
-
 A map of the code for people about to change it. For running an instance, read
-[SELF_HOSTING.md](SELF_HOSTING.md); for the phone apps, [MOBILE.md](https://github.com/DuarteSantos8/openGym/blob/main/docs/MOBILE.md) and
-[APP_STORES.md](https://github.com/DuarteSantos8/openGym/blob/main/docs/APP_STORES.md).
+[SELF_HOSTING.md](SELF_HOSTING.md); for the phone apps, [MOBILE.md](MOBILE.md) and
+[APP_STORES.md](APP_STORES.md).
 
 ## The big picture
 
@@ -199,4 +195,4 @@ flowchart LR
 ```
 
 GitHub is the home of the project. GitLab is a fast-forward-only mirror. Release steps are in
-[APP_STORES.md](https://github.com/DuarteSantos8/openGym/blob/main/docs/APP_STORES.md) and the [changelog](../CHANGELOG.md) format is described at its top.
+[APP_STORES.md](APP_STORES.md) and the [changelog](../CHANGELOG.md) format is described at its top.

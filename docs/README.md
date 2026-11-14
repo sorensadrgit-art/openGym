@@ -9,6 +9,9 @@ Pick the part that matches what you're doing. If you just have a question, try t
 |---|---|
 | [FAQ](FAQ.md) | You have a quick question: iPhone, cost, where your data goes, AI, the exercise media |
 | [Modules](MODULES.md) | You want a leaner app (just training, or training and body), or wonder what switching a module off hides and keeps |
+| [Phone app](MOBILE.md) | You want the iPhone app, the Apple Watch or the Android APK, or to connect the app to your own server |
+| [Wear OS watch](WEAR_OS.md) | You want openGym on a Galaxy Watch, Pixel Watch or another Wear OS watch, or you work on the watch app |
+| [Garmin watch](GARMIN.md) | You want openGym on a Forerunner, fēnix, Venu, Instinct or another Garmin, or you build and publish the Connect IQ app |
 | [Zepp OS watch](ZEPP_OS.md) | You want openGym on an Amazfit (Zepp OS) watch, or you work on that watch app or the watch relay |
 | [Importing data](DATA_IMPORTS.md) | You're coming from FitNotes, Strong, Hevy or Apple Health, or sharing a plan with someone |
 | [AI coach](AI_COACH.md) | Your instance has the coach switched on and you want to know what it sees and can change |
@@ -40,6 +43,7 @@ All settings live in `.env`; [`.env.example`](../.env.example) explains each one
 |---|---|
 | [Contributing](../CONTRIBUTING.md) | Before your first pull request: setup, guidelines, what CI checks |
 | [Architecture](ARCHITECTURE.md) | You want the map: how the app, server, phones and watch fit together, with diagrams |
+| [App stores and releases](APP_STORES.md) | You're shipping a release: the APK, Google Play and the App Store |
 | [scripts/](../scripts/README.md) | You want to know which build script does what |
 | [CLAUDE.md](../CLAUDE.md) | The same project context in the form Claude Code sessions start from |
 | [HTTP API](API.md) | You're touching routes; the OpenAPI spec is the source of truth |

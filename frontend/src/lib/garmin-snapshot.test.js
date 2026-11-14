@@ -1,21 +1,28 @@
-// The Garmin watch's cut-down snapshot (lib/garmin-snapshot.js), built from the shared watch
-// fixture the page builds (__fixtures__/watch/snapshot.json, watch-sync.wear.test.js). The Garmin
-// watch app and its own fixture left this fork with the native apps; the JS that cuts the
-// snapshot down is still here and still tested.
+// The Garmin watch's cut-down snapshot (lib/garmin-snapshot.js). The fixture in
+// frontend/garmin/test/snapshot.json is what the watch's Monkey C code is written against
+// (frontend/garmin/source/Core.mc); it is built here from the Wear OS fixture, which the phone
+// builds (watch-sync.wear.test.js). Changes on purpose: UPDATE_GARMIN_FIXTURES=1 npx vitest run …
 import { describe, expect, it } from 'vitest'
-import { readFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { garminSnapshot, garminWindow, garminTotals, GARMIN_MAX_BYTES } from './garmin-snapshot.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
-const wearSnap = () => JSON.parse(readFileSync(join(here, '__fixtures__', 'watch', 'snapshot.json'), 'utf8'))
+const wearSnap = () => JSON.parse(readFileSync(join(here, '..', '..', 'android', 'wear', 'src', 'test', 'resources', 'snapshot.json'), 'utf8'))
 const bytes = v => new TextEncoder().encode(JSON.stringify(v)).length
 
 const row = (done, extra = {}) => ({ w: 50, r: 8, sec: null, done, warmup: false, ...extra })
 const ex = (id, sets, extra = {}) => ({ id, name: 'Exercise ' + id, mode: 'reps', restSec: null, last: '50×8, 50×8', sets, step: 2.5, ...extra })
 
 describe('the Garmin snapshot', () => {
+  it('is the fixture the watch is written against', () => {
+    const out = garminSnapshot(wearSnap())
+    const file = join(here, '..', '..', 'garmin', 'test', 'snapshot.json')
+    if (process.env.UPDATE_GARMIN_FIXTURES) writeFileSync(file, JSON.stringify(out, null, 2) + '\n')
+    expect(JSON.parse(readFileSync(file, 'utf8'))).toEqual(JSON.parse(JSON.stringify(out)))
+  })
+
   it('keeps the same fields as the other watches, with where each exercise sits', () => {
     const out = garminSnapshot(wearSnap())
     expect(out.active.id).toBe('w-1')
