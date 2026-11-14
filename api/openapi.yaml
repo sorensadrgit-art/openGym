@@ -101,6 +101,9 @@ info:
     - `INTEGRATIONS` (unset by default, e.g. `webhook`): the providers of the `integrations`
       routes, and the `integrations` block of `GET /api/config`. `INTEGRATIONS_ALLOW_LAN=1`
       lets a webhook reach the home network (http too), never loopback or link-local.
+    - `ADDON_NUTRITION=1` (off by default): enables session-gated, rate-limited
+      `GET /api/addons/food` and adds `addons: { nutrition: true }` to the
+      signed-in response from `GET /api/config` only.
     - `MEDIA_UPLOADS` (default on; `0` removes the `media` routes and the `media` block of
       `GET /api/config`), `MEDIA_QUOTA_MB` (200 per profile, `0` = no cap),
       `MEDIA_IMAGE_MAX_MB` (2), `MEDIA_GIF_MAX_MB` (8), `MEDIA_VIDEO_MAX_MB` (40),
@@ -231,6 +234,68 @@ paths:
                   ok: { type: boolean, const: false }
                   writable: { type: boolean, const: false }
               example: { ok: false, writable: false }
+
+  /api/addons/food:
+    get:
+      tags: [integrations]
+      operationId: lookupAddonFood
+      summary: Look up one food barcode with Open Food Facts
+      description: |
+        Optional, read-only and disabled by default (`ADDON_NUTRITION=1`).
+        Requires a valid user session; only the barcode is sent to Open Food Facts,
+        never account information or workout history. The barcode must be 8–14
+        decimal digits. Rate-limited to 12 requests per minute per signed-in
+        profile; normalized results are cached for 15 minutes. Nutrition fields
+        reflect third-party published data and may be missing or incorrect.
+      parameters:
+        - in: query
+          name: barcode
+          required: true
+          description: Numeric GTIN (8–14 digits, leading zeros preserved)
+          schema:
+            type: string
+            pattern: '^[0-9]{8,14}$'
+          example: '3017620422003'
+      responses:
+        '200':
+          description: Sanitized Open Food Facts product fields per 100 g or mL, no images.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  food:
+                    type: object
+                    description: |
+                      Product name, barcode, brand, nutrients, and reported allergens. Nutrients
+                      come from the label as Open Food Facts records it; values Open Food Facts
+                      estimated itself are left out (`null`), as is a set stated per serving.
+                    properties:
+                      barcode: { type: string }
+                      name: { type: string }
+                      brand: { type: string }
+                      quantity: { type: string }
+                      serving: { type: string }
+                      grade: { type: [string, 'null'], enum: [A, B, C, D, E, null] }
+                      per100:
+                        type: object
+                        properties:
+                          kcal: { type: [number, 'null'] }
+                          proteinG: { type: [number, 'null'] }
+                          carbohydrateG: { type: [number, 'null'] }
+                          fatG: { type: [number, 'null'] }
+                          sugarG: { type: [number, 'null'] }
+                      basis:
+                        type: [string, 'null']
+                        enum: ['100g', '100ml', null]
+                        description: What `per100` is per, when the record says; `null` for a legacy record.
+                      allergens: { type: array, items: { type: string } }
+                      source: { type: string, const: Open Food Facts }
+        '400': { description: Invalid barcode format }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { description: Add-on not enabled or barcode not found }
+        '429': { description: Per-profile lookup budget exceeded }
+        '502': { description: Open Food Facts unavailable }
 
   /api/config:
     get:
@@ -2734,6 +2799,67 @@ paths:
                   failed: { type: integer }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/IntegrationsOff' }
+
+  /api/integrations/nutritrace/foods:
+    get:
+      tags: [integrations]
+      operationId: searchNutriTraceFoods
+      summary: Search the profile's own NutriTrace food library
+      description: |
+        Read only, for the Extension Lab's food diary. Needs `nutritrace` in `INTEGRATIONS` and a
+        NutriTrace connection on the profile (`POST /api/integrations/connect` with
+        `{ "provider": "nutritrace", "url": "https://…", "token": "nt_pat_…" }`; the token needs
+        the `read:foods` scope and is sealed on the server, never sent back). The server calls the
+        instance's `GET /api/v1/foods` with the search text and nothing else, and answers at most
+        25 foods. NutriTrace's `nutrition` is read as per `portion` of `unit`; `per100` is given
+        only when that unit is grams or millilitres. 30 searches a minute per profile.
+      parameters:
+        - name: q
+          in: query
+          required: false
+          description: Search text (case-insensitive name and brand match in NutriTrace), cut to 80 characters.
+          schema: { type: string, maxLength: 80 }
+      responses:
+        '200':
+          description: The matching foods.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  foods:
+                    type: array
+                    maxItems: 25
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        name: { type: string }
+                        brand: { type: string }
+                        barcode: { type: [string, 'null'] }
+                        portion: { type: [number, 'null'] }
+                        unit: { type: string }
+                        basis: { type: [string, 'null'], enum: ['100g', '100ml', null] }
+                        per100:
+                          type: [object, 'null']
+                          properties:
+                            kcal: { type: [number, 'null'] }
+                            proteinG: { type: [number, 'null'] }
+                            carbohydrateG: { type: [number, 'null'] }
+                            fatG: { type: [number, 'null'] }
+                        perPortion:
+                          type: object
+                          properties:
+                            kcal: { type: [number, 'null'] }
+                            proteinG: { type: [number, 'null'] }
+                            carbohydrateG: { type: [number, 'null'] }
+                            fatG: { type: [number, 'null'] }
+                  total: { type: integer }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { description: 'Integrations are off, NutriTrace is not offered, or the profile has no NutriTrace connection.' }
+        '409': { description: The connection is paused. }
+        '429': { description: 'Too many searches from this profile, or NutriTrace asked to slow down (`Retry-After`).' }
+        '502': { description: 'NutriTrace refused the token or scope, could not be reached, or answered with something unreadable; `code` says which.' }
 
   /api/activity:
     post:

@@ -41,6 +41,7 @@ import { atomicWrite as durableWrite } from './durable.js';
 import { ipv6Groups, guardedLookup, pushEndpointError, MAX_PUSH_ENDPOINT } from './net-guard.js';
 import { createIntegrations } from './integrations/index.js';
 import { integrationRoutes } from './integrations/routes.js';
+import { createFoodLookup } from './addons/food.js';
 import { excusedOn, nudgeFor, nudgeWindowOpen, toneOf } from './nudge.js';
 import { wrappedPushYear, wrappedSummary, wrappedPushOwed, wrappedPush } from './wrapped.js';
 
@@ -79,6 +80,11 @@ const ALLOW_GUEST = !/^(0|false|no|off)$/i.test(process.env.ALLOW_GUEST || '');
 // every account that opts in, so an instance has to ask for it. While it is off every password
 // route answers 404 and the app shows none of it; hashes already stored stay where they are.
 const PASSWORD_LOGIN = /^(1|true|yes|on)$/i.test(process.env.PASSWORD_LOGIN || '');
+// A network request to Open Food Facts is opt-in for the server operator. Nothing is
+// sent to that service unless a signed-in person explicitly searches a barcode.
+const NUTRITION_ON = /^(1|true|yes|on)$/i.test(process.env.ADDON_NUTRITION || '');
+const FOOD_RATE = createWindow({ max: 12, windowMs: 60000 });
+const lookupFood = createFoodLookup({ userAgent: process.env.OPEN_FOOD_FACTS_USER_AGENT || undefined });
 // The language the sign-in screen, and every profile that never picked one, starts in (#303) —
 // for an instance whose people share a language. Only a tag's shape is checked here; the app
 // matches it against the languages it has and ignores one it does not know. Unset, it is left
@@ -2084,6 +2090,18 @@ const routes = {
     json(res, 200, { ok: true, users: db.users.length, writable: true });
   },
 
+  // Read-only, session-gated and rate-limited; never proxy arbitrary URLs.
+  'GET /api/addons/food': async (req, res) => {
+    if (!NUTRITION_ON) return json(res, 404, { error: 'not enabled' });
+    const user = readSession(req);
+    if (!user) return json(res, 401, { error: 'not signed in' });
+    const wait = FOOD_RATE.take(user.id);
+    if (wait) return tooMany(res, wait);
+    const barcode = new URL(req.url, 'http://x').searchParams.get('barcode');
+    const result = await lookupFood(barcode);
+    json(res, result.status, result.body);
+  },
+
   // Public config the login screen needs before anyone is signed in. `coach` is absent unless
   // the instance has both switched the Coach on and successfully connected a provider — the
   // single flag every piece of Coach UI hangs off, so an unconfigured instance is byte-for-byte
@@ -2115,7 +2133,8 @@ const routes = {
       ...(readSession(req) ? { coach: coachConfig.publicConfig() } : {}),
       // Which integrations this server offers (only to a session, like the Coach block). Absent
       // with INTEGRATIONS unset, which is how the app knows to show the server cards as off.
-      ...(readSession(req) && integrations.publicConfig() ? { integrations: integrations.publicConfig() } : {})
+      ...(readSession(req) && integrations.publicConfig() ? { integrations: integrations.publicConfig() } : {}),
+      ...(readSession(req) && NUTRITION_ON ? { addons: { nutrition: true } } : {})
     });
   },
 
