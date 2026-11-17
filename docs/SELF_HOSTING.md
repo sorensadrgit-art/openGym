@@ -1,0 +1,1367 @@
+# Self-hosting openGym
+
+openGym is two small containers (a web server and an API) plus a folder of your data.
+This guide takes you from "just cloned it" to "using it from my phone over the internet".
+
+**On this page**
+
+1. [Run it locally](#1-run-it-locally-5-minutes) — five minutes, nothing else needed
+2. [The passkey requirement](#2-understand-the-passkey-requirement-important) — why your phone needs HTTPS
+3. [HTTPS on your own domain](#3-expose-it-over-https-on-your-own-domain) — Cloudflare Tunnel, Caddy, Traefik, nginx, Tailscale Serve
+4. [Multiple users](#4-multiple-users) — admin dashboard, invites, language, activity log, password sign-in
+5. [Fitting into an existing stack](#5-fitting-it-into-an-existing-stack) — ports, [NAS](#on-a-nas-synology-qnap-unraid-truenas), subpaths, media uploads
+6. [Backups](#6-backups)
+7. [Notifications](#7-notifications)
+8. [Updating](#8-updating)
+- [Passkeys fail even though `RP_ID` looks right](#passkeys-fail-even-though-rp_id-looks-right)
+- [Which passkey providers work](#which-passkey-providers-work)
+- [Troubleshooting](#troubleshooting)
+
+HTTPS on a LAN without a public domain has [its own guide](SELF_HOSTING_HTTPS.md), and so do
+[a Mac at home with Tailscale](SELF_HOSTING_MAC.md) and [Kubernetes](SELF_HOSTING_KUBERNETES.md). Short answers to common questions are in the [FAQ](FAQ.md).
+
+> **Rather not run a server?** [ElfHosted](https://store.elfhosted.com/product/opengym/?utm_source=opengym&utm_medium=docs&utm_campaign=opengym-sponsor) runs your own private openGym for you, and your data stays yours. There's no Docker or HTTPS to set up, the AI coach is included with no API key needed, and updates and daily backups are handled for you. Try it with a $1, 7-day trial.
+> ElfHosted sponsors openGym. Everything below is for running it yourself, which stays free and fully supported.
+
+## 1. Run it locally (5 minutes)
+
+Requirements: [Docker](https://docs.docker.com/get-docker/) with the Compose plugin.
+
+```bash
+git clone https://github.com/DuarteSantos8/openGym   # or https://gitlab.com/DuarteSantos8/opengym — same repo
+cd openGym
+cp .env.example .env
+docker compose pull   # prebuilt images from ghcr.io (amd64 + arm64; the same images are on GitLab's registry) — or skip and build from source
+docker compose up -d
+```
+
+- The exercise stills and animations (180 px, ~80 MB) ship inside the web image; nothing is downloaded on first start. An old `media/` folder and its two volume lines from before v1.4.0 are no longer used: harmless if you keep them, safe to delete.
+- Open **http://localhost:8080** and create a profile with a passkey.
+- Rather build from source than pull prebuilt images? Skip `docker compose pull` and run
+  `docker compose up -d --build` instead — no Node needed locally either way.
+
+Check it's healthy:
+
+```bash
+docker compose ps
+curl http://localhost:8080/api/health      # {"ok":true,...}
+```
+
+Logs: `docker compose logs -f`. Stop: `docker compose down`.
+
+## 2. Understand the passkey requirement (important)
+
+openGym signs you in with **passkeys** (WebAuthn). Browsers enforce two rules:
+
+1. Passkeys are bound to an exact **hostname** (`RP_ID`).
+2. They only work over **HTTPS** — with one exception: `http://localhost`.
+
+So `http://localhost:8080` works on the machine running Docker, but **another device (your
+phone) cannot use `http://<your-LAN-ip>:8080`** — that's neither localhost nor HTTPS, so the
+passkey prompt won't appear. To use openGym from your phone you need a real HTTPS hostname.
+
+(You can still open it over LAN in **guest mode**, which stores data only in that browser — or
+turn on **password sign-in**, see [§4](#password-sign-in-optional).)
+
+The standalone mobile app (`docs/MOBILE.md`) sidesteps this entirely for its "connect to my
+server" mode: instead of a passkey ceremony (impossible from inside its WebView, which never
+runs at your real hostname), it pairs by redeeming a short one-time code — minted from
+Settings → Account → "Pair the mobile app" in an already signed-in browser tab — for a bearer token
+sent as an `Authorization` header rather than a cookie. Two consequences worth knowing if
+you're poking at the API directly:
+
+- `POST /api/pair/create` (needs a session plus the owner proof: a passkey, or the current
+  password where that counts) and `POST /api/pair/redeem` (doesn't) implement
+  this — see `api/server.js`. The returned token is the exact same signed value a cookie
+  carries, so "sign out everywhere" invalidates it too — and a phone has no passkey to sign
+  back in with, so every paired phone has to be **paired again** afterwards. The phone says
+  so ("Your server no longer accepts this phone") and keeps its data until it is.
+- The token lasts `SESSION_DAYS` like a cookie, but renews itself: `GET /api/me`, which the
+  app calls on every start, answers a bearer token past half its lifetime with a fresh
+  `token` carrying the account's current session version. Revocation is unaffected.
+- The server reflects `Access-Control-Allow-Origin` for any request that sends an `Origin`
+  header, so the app's own WebView origin can call the API cross-origin. It never sends
+  `Access-Control-Allow-Credentials`, so this doesn't let a browser read your cookie session
+  from another origin — only bearer-token requests benefit from it.
+- A request body has to be sent as `Content-Type: application/json`; any other type gets a
+  `415`. `curl -d` sends a form type, so a script needs `-H 'Content-Type: application/json'`.
+
+## 3. Expose it over HTTPS on your own domain
+
+> Want HTTPS **without** exposing anything to the internet — a valid certificate on a LAN-only address? See [SELF_HOSTING_HTTPS.md](./SELF_HOSTING_HTTPS.md) (wildcard cert via a DNS challenge, Caddy in front).
+
+Put openGym behind something that terminates TLS for a hostname you control, then point it at
+the `web` container. Pick whichever you already run:
+
+### Option A — Cloudflare Tunnel (no open ports)
+
+1. Create a tunnel and route `gym.example.com` → `http://<docker-host>:8080`.
+2. Cloudflare gives you HTTPS automatically.
+
+### Option B — Caddy (automatic Let's Encrypt)
+
+```caddy
+gym.example.com {
+    reverse_proxy localhost:8080
+}
+```
+
+### Option C — Traefik / nginx / Nginx Proxy Manager
+
+Route `gym.example.com` (HTTPS) → `web:80` (or `<docker-host>:8080`). Any reverse proxy works —
+openGym only needs the browser to reach it over `https://gym.example.com`. If that proxy caps
+request bodies (nginx does, at 1 MiB by default), allow at least 5 MiB on `/api/` — the app syncs
+its whole history in one PUT; the bundled web image already allows 5 MiB, matching the API. The
+photos and videos people attach to their own exercises need more room and more time on
+`/api/media/` — see [Photos and videos of custom exercises](#photos-and-videos-of-custom-exercises).
+
+### Option D — Tailscale Serve (no domain, nothing on the internet)
+
+For an instance only you (or your household) use, with [Tailscale](https://tailscale.com) on the
+phones: Tailscale Serve gives the Docker host an HTTPS address inside your tailnet, with a real
+certificate. No domain to buy, no open ports, and nothing reachable from the internet.
+
+1. In the Tailscale admin console, on the **DNS** page, turn on **MagicDNS** and **HTTPS
+   Certificates**.
+2. On the Docker host:
+
+   ```bash
+   tailscale serve --bg http://127.0.0.1:8080
+   ```
+
+   The first time, it prints a link to enable Serve for your tailnet; open it, approve, and the
+   command carries on. `tailscale serve status` then shows the address, something like
+   `https://myhost.tail1234.ts.net`.
+3. Use that hostname as your domain below (`RP_ID=myhost.tail1234.ts.net`,
+   `ORIGIN=https://myhost.tail1234.ts.net`). Since Tailscale is the only way in, you can also set
+   `WEB_PORT=127.0.0.1:8080` so the container isn't reachable from the rest of your LAN.
+
+Phones need the Tailscale app connected to open openGym. The address comes from the machine's
+name in your tailnet, so renaming the host or moving openGym to another machine changes it, and
+with it `RP_ID` (see the note on passkeys below).
+
+Then set your domain in `.env` and restart:
+
+```bash
+# .env
+RP_ID=gym.example.com
+ORIGIN=https://gym.example.com
+WEB_PORT=8080
+RP_NAME=openGym
+```
+
+```bash
+docker compose up -d
+```
+
+Visit `https://gym.example.com`, create your profile, and add it to your home screen
+(iOS: Share → Add to Home Screen · Android: ⋮ → Add to Home screen).
+
+> Changing `RP_ID` later invalidates existing passkeys (they were bound to the old hostname).
+> Pick your domain before people register.
+
+#### Phone app and CORS
+
+The browser app is served from your domain, so it never makes a cross-origin request. The
+[phone app](MOBILE.md#connecting-the-app-to-your-own-server) does: its WebView runs at
+`https://localhost` (Android) or `capacitor://localhost` (iOS), and the browser engine asks your
+server first (a CORS preflight, `OPTIONS`) before every request with a JSON body or a token.
+**openGym answers that preflight itself**: it allows the requesting origin, the methods
+`GET, POST, PUT, DELETE, OPTIONS` and the headers `Content-Type, Authorization` — so the proxy only
+has to pass it through unchanged.
+
+Don't put a CORS middleware on the openGym route. A Traefik `headers` middleware with
+`accessControlAllowOriginList` (or nginx `add_header Access-Control-*` with an `if
+($request_method = OPTIONS) { return 204; }`) answers the preflight on its own and never forwards
+it; when the app's origin is not on its list, the phone refuses to send the real request and
+pairing fails while the openGym containers log nothing. In Traefik's access log the preflight then
+looks like this:
+
+```
+"OPTIONS /api/pair/redeem HTTP/2.0" 200 0 "https://localhost/" "Mozilla/5.0 (Linux; Android 10; K; wv) ..." 16011 "websecure-opengym_rtr@file" "-" 0ms
+```
+
+The signature is status `200` with backend `"-"` and `0ms`: the router matched, but no service
+was asked and no time was spent. When openGym answers it, you see `204`, the openGym service
+name and a few milliseconds. If the middleware has to stay (it is shared with other routes), add
+`https://localhost` and `capacitor://localhost` to the allowed origins, the methods and headers
+above to its lists, and don't set allow-credentials (the app authenticates with a bearer token,
+never a cookie).
+
+The same thing breaks in other shapes:
+
+- **A second `Access-Control-Allow-Origin`.** openGym already sends one. A proxy that adds its
+  own (Nginx Proxy Manager's "Advanced" tab or a custom location with `add_header
+  Access-Control-Allow-Origin ...`, a Caddy `header` line, a Traefik middleware) makes it two,
+  and the browser engine refuses a response with two, even when both say the same origin.
+  Remove the proxy's copy.
+- **A rewritten or stripped header.** A proxy that sets the header to a fixed origin (your
+  domain, or `*` together with credentials) or drops the `Access-Control-*` headers from
+  openGym's answer refuses the app just the same. Pass them through untouched.
+- **SSO or forward-auth in front of `/api/`.** Authelia, Authentik, oauth2-proxy, Cloudflare
+  Access or basic auth answer the app with a redirect to a login page or a `401`, and the
+  preflight never carries cookies, so it can't log in. openGym has its own sign-in (passkeys,
+  passwords and the app's bearer token), so exclude `/api/` from proxy auth. Keep the auth on the
+  rest of the site if you like; the phone app only talks to `/api/`.
+
+Check it yourself from any machine; this is the preflight the phone sends:
+
+```bash
+curl -si -X OPTIONS https://HOST/api/pair/redeem \
+  -H 'Origin: https://localhost' \
+  -H 'Access-Control-Request-Method: POST' \
+  -H 'Access-Control-Request-Headers: content-type'
+```
+
+Expect `HTTP/2 204` (or `HTTP/1.1 204`) with exactly one `access-control-allow-origin:
+https://localhost` line. A `200` with no CORS headers, a `30x` or `401`, an HTML page or two
+`access-control-allow-origin` lines mean the proxy is in the way.
+
+The app tells these cases apart since v1.3.10: when the server is reachable but the request is
+refused, pairing says so instead of "Failed to fetch", and when a login page or proxy rule
+answered in openGym's place, it says that too. Since v1.3.11 the Android app also pairs with a
+plain `http://` address on your LAN (type the `http://`; #428). Sign in on the web with a password
+to make the code, since passkeys need https. Over http the code and the app's token cross your
+network unencrypted, so keep it to a network you trust.
+
+## 4. Multiple users
+
+Anyone who can reach the URL can create their own profile — each gets isolated data. That's the
+default: open signup. With `FIRST_USER_ADMIN=1` in `.env`, **the first profile created on the
+instance becomes its admin**, so a fresh install needs no `ADMIN_UIDS` edit. It is off by default,
+because an existing instance with no profiles yet would hand admin to whoever signs up first; if
+you turn it on, register your own profile before you share the address.
+
+"First" is decided at the moment of registration: the instance had no profiles at all. It is
+never applied after the fact — an instance that already has profiles promotes nobody when it is
+upgraded — and an instance whose profiles were all deleted counts as fresh again. The flag is
+stored as `"admin": true` on that profile's entry in `./data/db.json`; delete that line (with the
+stack stopped) to take it back.
+
+If you'd rather control who gets in, these optional settings in `.env` turn that around:
+
+```bash
+ADMIN_UIDS=youruserid      # comma-separated; these users get the admin dashboard too
+INVITE_ONLY=1              # new profiles need an invite code
+ALLOW_GUEST=0              # remove "Continue without account"
+FIRST_USER_ADMIN=1         # the first profile on an empty instance becomes its admin
+```
+
+Create your own profile before you switch `INVITE_ONLY` on: with no profile and no admin yet,
+nobody could generate the first code.
+
+For more admins (or on an instance that existed before `FIRST_USER_ADMIN`), copy the id from
+**Settings → Account → Account ID** (tap it to copy; it is also in `./data/db.json` under
+`users[].id`) and put it in `ADMIN_UIDS`. The same row is how anyone on your instance tells you
+which account is theirs when they need help. Admins get an **Admin dashboard** link in Settings → Account: who's training
+right now, each user's workout history and body weight, the ability to disable an account (signed
+out and locked out everywhere until you re-enable it), and — with `INVITE_ONLY=1` — generating and
+revoking invite codes. Existing accounts keep working when you switch invite-only on. Admin access
+is gated by your passkey and enforced server-side, so it needs no separate login.
+
+**Already registered and there's no Admin dashboard?** That's the usual way to find out
+`FIRST_USER_ADMIN` was off when you signed up (it is by default). It only ever applies to the very
+first profile, so switching it on now does nothing. Do this instead:
+
+1. Copy your id from **Settings → Account → Account ID** (tap it to copy).
+2. Put it in `.env`: `ADMIN_UIDS=<that id>`.
+3. `docker compose up -d`. Not `docker compose restart`: that keeps the old environment.
+4. Reload the app. **Settings → Account → Admin dashboard** is there now.
+
+The [AI Coach](AI_COACH.md#turning-it-on), invite codes and recovery codes all live in that
+dashboard, so this is step one for each of them.
+
+### Default language
+
+An instance whose people share a language can start everyone in it:
+
+```bash
+DEFAULT_LANG=lt            # any code from Settings → Units & language → Language: de, es, fr, lt, pt-BR, …
+```
+
+The sign-in and create-profile screens open in that language, and so does every profile that
+has never picked one in **Settings → Units & language → Language**. Anyone's own choice there always wins, and
+profiles that existed before this setting keep the language they have — the app cannot tell an
+old profile that chose English from one that never looked, so it leaves them alone. Without
+`DEFAULT_LANG`, a new visitor starts in their browser's language when openGym has it, else
+English. A code the app has no translation for is ignored. The phone app in local mode has no
+server to ask and is unaffected.
+
+The language setting covers the app UI. Exercise names and instructions are translated by
+separate catalogue packs; when a selected language has no catalogue pack, that exercise content
+stays in English and the language picker says so.
+
+Until someone picks a language, it is worked out on each device and not saved with the profile:
+without `DEFAULT_LANG`, the same profile can show in German on one phone and in English on a
+laptop, and the Coach answers in whichever the app is showing. A scheduled review, which no app
+asks for, is written in `DEFAULT_LANG` when it is set.
+
+### The activity log
+
+The dashboard also keeps an **activity log**: sign-ins, sign-outs, failed attempts, refused
+signups, and every admin action (disabling an account, creating or revoking an invite code). It
+lives in `./data/audit.log` as one JSON object per line, so `tail -f data/audit.log` and `jq`
+work on it directly, and the dashboard reads the same file.
+
+It is on by default and keeps the last 5,000 events or 90 days, whichever comes first
+(`AUDIT_LOG=0` turns it off entirely; `AUDIT_MAX` and `AUDIT_DAYS` change the caps). **IP
+addresses are not recorded** unless you set `AUDIT_IP=net` (network only, e.g. `203.0.113.0/24`)
+or `AUDIT_IP=full`. Neither the browser's user-agent nor the passkey id of a failed sign-in is
+ever stored: the first is a fingerprint, and the second would let you follow an unknown device
+from one attempt to the next.
+
+Two things worth expecting. **Guests never appear** — guest mode never talks to the server, so
+there is nothing to log, exactly as there is nothing for the rest of the dashboard to show. And
+**a disabled account goes quiet**: a disabled user is refused at the session check, so their only
+entries are the failed sign-ins they keep making.
+
+Clearing the log from the dashboard records the clear itself, and the event ids keep counting, so
+a gap is always visible.
+
+`INVITE_ONLY=1` and `ALLOW_GUEST=0` answer different questions and are usually set together.
+Invite-only controls who may *create a profile*; it says nothing about the **Continue without
+account** button, which never creates one. Guest mode keeps everything in that browser and never
+talks to the server — there is no account, no sync and nothing for the admin dashboard to show —
+so on an instance meant for a known set of people it is a door that leads nowhere useful. With
+`ALLOW_GUEST=0` the button is gone, and anyone already using the app as a guest is returned to the
+login screen on their next visit. Their data is not deleted: it stays in that browser and comes
+back if you ever switch guests on again, or moves into a real profile if they create one on the
+same device.
+
+Prefer to keep the whole thing off the open internet? A VPN or an auth proxy (Authelia, Cloudflare
+Access…) in front still works, and composes with the above.
+
+Behind an auth proxy, let three files through without a login: `/icon-180.png`, `/icon-512.png`
+and `/manifest.json` — the app's icon and its manifest, nothing personal in them. iOS fetches the
+Home Screen icon outside the page, without your session cookie, so a gated icon comes back as the
+proxy's login page and iOS 26 draws a letter tile instead of the dumbbell (observed on iOS 26.6
+behind Teleport; Authelia users know the same from favicons and manifests). Authelia: a `bypass`
+rule for those paths; Authentik: unauthenticated paths; Cloudflare Access: a bypass policy;
+oauth2-proxy: `skip_auth_routes`. A proxy that cannot exempt a path (Teleport) has to serve the
+icons inline as `data:` URLs instead — Safari 26 accepts those, older iOS does not, which is why
+that is not the default here.
+
+### Password sign-in (optional)
+
+Passkeys are the default and stay the recommended way in. Some people cannot use them: a browser
+on a plain `http://` LAN address (passkeys need HTTPS or `localhost`), a Firefox setup that only
+offers a hardware key, a passkey on a phone that will not move to the desktop. For them there is
+an optional name-and-password sign-in, off unless you ask for it:
+
+```bash
+PASSWORD_LOGIN=1
+```
+
+What changes when it is on:
+
+- The sign-in screen offers **Sign in with password**, and **Create new profile** can use a
+  password instead of a passkey — in browsers without passkey support too. With `INVITE_ONLY=1`
+  it asks for the invite code exactly like passkey signup does.
+- Settings → Account gets a **Password** row. Nobody has a password until they set one there.
+  Setting a first password asks for the profile's passkey; changing it asks for the current
+  password (or the passkey, if it was forgotten). Either signs the profile out everywhere else,
+  and paired phones have to be paired again. Removing it asks for the password or the passkey
+  too — a session on its own may be a copied cookie.
+- People sign in with their **profile name** — case and surrounding spaces do not matter — and the
+  password. Two profiles with a password cannot share a name; Settings says so when a name is
+  already taken that way.
+- Optionally with an **e-mail address** instead of the name: see *Signing in with an e-mail*
+  below.
+- A password cannot be removed while it is the profile's only way in (a profile made with a
+  password has no passkey).
+- The password also confirms the changes that need proof — adding or removing a passkey, making
+  a code for another device — but only while `PASSWORD_LOGIN=1`.
+
+**Switching it off again** turns every password route off, and a password kept from before no
+longer confirms anything either: an old or reused one must not be enough to add a passkey. A
+profile that only has a password can then neither sign in nor add a passkey, even from a
+browser that is still signed in. Before you switch it off, have those profiles add a passkey
+(**Settings → Account → Passkeys → Add a passkey**, confirmed with their password); the admin
+dashboard marks every profile that has a password.
+
+**Signing in with an e-mail.** Settings → Account also gets a **Sign-in e-mail** row, right under
+the password, and **Create new profile** with a password has an optional e-mail field. Whoever
+adds an address can type it at **Sign in with password** instead of their profile name (case and
+spaces do not matter). openGym has no mail server and **never sends anything** to it: there is no
+verification mail and no reset mail — a forgotten password is still reset with the admin's code
+below, which can be redeemed with the name or the e-mail. So the address is not proven to belong
+to anyone; it is only a second name that points at the account, and the password still opens it.
+
+- Adding, changing and removing it asks for the same proof as setting a password (the current
+  password or a passkey of the profile) — a session on its own may be a copied cookie.
+- An address belongs to one profile only, and can never be another password profile's name.
+  Taking one that is in use is refused ("Another profile already uses this e-mail address") — see
+  *What an e-mail gives away* below for what that says and how it is limited.
+- Wrong passwords count against the **account**, whether it was named by its name or its e-mail,
+  so switching between the two does not get around the pause.
+- Only the owner (in Settings) and admins (the user list and the user's page in the admin
+  dashboard) ever see the address. It is not written to the activity log (entries show it masked,
+  `a…@e…`) or the container log, is not part of what the Coach, the MCP server or plan sharing
+  see, and is not in `/api/me`. It is stored in `db.json` as `email` on the user, lower-cased.
+- With `PASSWORD_LOGIN` off, the row and the field are hidden and the address is not used; it
+  stays in `db.json` for when the flag comes back.
+
+**What an e-mail gives away.** A profile trying to take an address already in use is told so,
+which says "some profile on this instance uses this address" — never which one. The alternative,
+accepting it silently, would leave someone who typed their address on a second profile believing
+it worked. So the answer is made expensive instead: in Settings it comes only after the proof (a
+passkey prompt or a password check per try). Signing up with a password needs no proof, so there
+the answer costs less: it comes after the new password is hashed and, with `INVITE_ONLY=1`, only
+to someone with a valid invite code (a refusal leaves the code unused); on an open instance
+anyone can ask. Every such refusal — in Settings or on signup — counts against the visitor's
+address (and in Settings the account): 20 are free, then a pause of 30 seconds doubling to 15
+minutes. That leaves a few tries an hour, comparable to what the
+name-taken answer already says about names. The other thing to know: once someone has paused an
+account by wrong passwords under its name, trying a guessed address shows the same pause, which
+ties that address to that name — the price of not letting a switch to the e-mail skip the pause.
+
+**Resetting a password.** There is no e-mail. In the admin dashboard open the user and choose
+**Reset password**. You get a one-time code such as `K7WQ-2MZP-4HXA` to hand over in person or
+by message: it is shown once, works once, is valid for 24 hours and is stored only as a hash.
+Issuing it removes their current password and signs them out everywhere at once — their passkeys
+keep working. They enter their name (or their sign-in e-mail), the code and a new password under **Sign in with password →
+Have a reset code?**. The same code gets someone back in who lost their only passkey (#219).
+Admin accounts cannot be reset from the dashboard, so one admin cannot take over another's login;
+an admin sets their own password in Settings. Every step is in the activity log
+(`admin.password.reset`, `auth.password.reset`, `auth.password.ok` / `fail` / `locked`, and
+`auth.email.set` / `change` / `remove` / `fail` for the sign-in e-mail).
+
+**On a plain-HTTP LAN**, set `ORIGIN` to exactly the address people type, for example
+`ORIGIN=http://192.168.1.20:8080`. Browsers do not send `Sec-Fetch-Site` to plain-http addresses,
+so the API compares the request's `Origin` with `ORIGIN` instead and refuses sign-ins (and syncs)
+that come from anywhere else. Know what you are trading: without TLS the password and the session
+cookie (which cannot be `Secure` over http) cross your network in the clear. For a certificate on
+a LAN-only address, see [SELF_HOSTING_HTTPS.md](./SELF_HOSTING_HTTPS.md).
+
+**What a password gives up compared with a passkey:**
+
+- A passkey cannot be phished, reused or guessed — it is bound to your hostname and never leaves
+  the device. A password can be all three, which is why passkeys stay the default everywhere.
+- `db.json` holds a scrypt hash of each password (N=2^15, r=8, p=1, 16-byte random salt). Someone
+  with a copy of `./data` can try guesses offline, slowly; a passkey's public key gives them
+  nothing to try.
+- Guessing online is throttled. Five wrong passwords for an account — named by its name or its
+  e-mail — are free; the sixth pauses password sign-in for that account for a minute, doubling up to an hour, whoever
+  sends them — names and addresses that do not exist pause the same way, so a pause reveals
+  nothing about whether they exist. Twenty wrong answers from one address are free; the 21st pauses that
+  address for 30 seconds, doubling up to 15 minutes, and every address gets 60 requests a minute
+  to the password routes. Guesses sent all at once count the same as guesses sent one by one.
+  Passkey sign-in, passkey signup and phone pairing are not throttled at all, so they are never
+  paused. The counters live in memory, so a restart clears them.
+- The flip side: anyone who knows a name can keep that name's *password* sign-in paused. The
+  activity log shows it (`auth.password.locked`), and passkeys still work. A reset code is not
+  paused per name — it is 60 random bits and lives a day — so nobody can keep a real code from
+  working by sending wrong ones.
+- A pending reset code keeps its profile's name: until it is used or expires, nobody else can
+  register that name with a password or set a first password on another profile of that name.
+- Passwords need 10 to 256 characters and may not be one of a short built-in list of the
+  passwords guessing scripts try first (`Password123!`, `qwerty…`, the profile's own name with
+  digits). A long passphrase is the point.
+
+**Which address counts as one visitor.** The throttle needs the visitor's address. With the
+bundled `docker-compose.yml` it reads the one the web container passes on: the compose file sets
+`TRUST_PROXY=1` for the api, because the API is reachable only through that container, which
+overwrites `X-Forwarded-For`. If you put another reverse proxy in front of the web container, every
+visitor may arrive as that proxy — then the per-address limits apply to everyone together: one
+client sending wrong passwords can pause password sign-in for everybody for up to 15 minutes at a
+time (passkeys keep working), and the per-name pause is what protects the passwords. Behind
+Cloudflare, `CF_CONNECTING_IP` (see the activity log above) passes the real visitor on. Running
+the API without the web container, leave `TRUST_PROXY` off unless whatever is in front overwrites
+(not appends to) `X-Forwarded-For`.
+
+**Switching it off again** hides all of it and makes every password route answer 404. The stored
+hashes stay in `db.json` and work again if you switch it back on — but while it is off, a profile
+that only has a password cannot sign in.
+
+The mobile app keeps pairing: someone with a password signs in to the website with it and pairs
+from Settings → Account → "Pair the mobile app", as with a passkey.
+
+### Sign in with your identity provider (OIDC, optional)
+
+Already running Authentik, Authelia, Keycloak, voidAuth or Pocket ID for the rest of your
+homelab? openGym can sign people in through it, next to passkeys (not instead of them). Off
+until you set an issuer and a client:
+
+```bash
+OIDC_ISSUER=https://auth.example.com/application/o/opengym   # whatever the provider calls its issuer
+OIDC_CLIENT_ID=opengym
+OIDC_CLIENT_SECRET=...            # leave out for a public client (PKCE only)
+OIDC_LABEL=Authentik              # the name on the button: "Sign in with Authentik"
+```
+
+At the provider, make a client with the **authorization code** flow and register exactly one
+redirect URI: `<ORIGIN>/api/oidc/callback`, e.g. `https://gym.example.com/api/oidc/callback`
+(on a subpath install, set `OIDC_REDIRECT_URI` to the full callback address). openGym reads
+`<OIDC_ISSUER>/.well-known/openid-configuration` at the first sign-in and every hour after, so
+the issuer you set must be the one that document names.
+
+What it does:
+
+- The sign-in screen shows **Sign in with {label}** first. A first sign-in makes a profile, named
+  after what the provider calls the person, and `FIRST_USER_ADMIN` works for it exactly as for a
+  passkey sign-up: the very first profile on an empty instance becomes its admin and owner.
+- The phone app finds the button on its "Connect to my server" sheet as soon as the address is
+  typed. It opens the provider in the system browser (Safari's sign-in sheet on iPhone, a Custom Tab
+  on Android) and comes back on `opengym://oidc`. Nothing to register for that: the app's way back
+  is a one-time code the server hands out itself, and it only works with a secret that never
+  leaves the phone.
+- A passkey profile can link the provider in Settings → Account → **Sign in with {label}**
+  (it asks the usual passkey or password check first), and unlink it again while it has another
+  way in. Someone who only ever signed in through the provider can still add passkeys, and
+  confirms sensitive changes (pairing a phone, adding a passkey, deleting the account) with a
+  fresh sign-in at the provider.
+- Admin → **Identity provider** shows what the server was told, whether the provider answered,
+  how many signing keys it loaded, and the last error. **Check now** asks again without a restart.
+
+**Who gets in.** With no group settings, anyone your provider signs in gets a profile. To let
+in only a group (the "being in the openGym group is the invite" setup):
+
+```bash
+OIDC_SCOPES=openid profile email groups     # add whatever scope makes your provider send groups
+OIDC_GROUPS_CLAIM=groups                    # the claim name; a dotted path works (realm_access.roles)
+OIDC_ALLOWED_GROUPS=opengym                 # comma separated; one of them is enough
+```
+
+Groups are read from the ID token, or from userinfo when the ID token has none. Someone taken out of
+the group is refused at their next provider sign-in, and every session their profile still had
+ends right then. With `INVITE_ONLY=1` and no groups set, provider sign-in only works for profiles
+that already exist (linked in Settings); with groups set, the group is the invite.
+
+**Roles from groups.** `OIDC_ROLE_MAP` maps groups onto openGym roles, `role=group` pairs, comma
+separated. `access` lets a group in, `admin` makes its members admins, `trainer` free trainers,
+and with `TRAINERS=on` a studio role names its gym id:
+
+```bash
+OIDC_ROLE_MAP="access=opengym, admin=opengym-admins, trainer=pt-freelance, lead@g_x1=fitbox-leads, trainer@g_x1=fitbox-staff, member@g_x1=fitbox"
+```
+
+A role the map gave is taken away again when the group goes; a role an admin gave by hand never is,
+and the owner always stays admin. Roles are applied at each provider sign-in.
+
+**Linking by e-mail** is off. With `OIDC_EMAIL_LINKING=1`, a first provider sign-in whose address
+matches a profile's sign-in e-mail (Settings → Account, with `PASSWORD_LOGIN`) is linked to that
+profile, but only when the provider says `email_verified: true`. Turn it on only if your provider
+really verifies addresses (some let people type any address and still call it verified); otherwise
+link from Settings. An unverified match is always refused, never linked and never duplicated.
+
+**Provider only.** `OIDC_ONLY=1` makes the provider the way in: no passkey or password sign-ups,
+and passkey and password sign-ins only for admins, so a provider outage never locks you out of your
+own server. Pairing a phone and existing sessions keep working.
+
+**Signing out there too.** `OIDC_LOGOUT=1` sends the browser on to the provider's
+`end_session_endpoint` after Sign out (with `client_id` and `post_logout_redirect_uri=<ORIGIN>/`,
+which some providers want registered as well). Providers without one (Authelia, for one) simply
+ignore it.
+
+**Other knobs.** `OIDC_TOKEN_AUTH=post` sends the client secret in the form instead of as Basic
+auth, for providers that want `client_secret_post`. `SESSION_SAMESITE=strict` keeps the session
+cookie off every request another site starts (the default `lax` is what older installs had).
+
+**What is checked.** The authorization code flow with PKCE (S256), a fresh `state` and `nonce`
+for each sign-in and a 10-minute cookie that ties the callback to the browser that started it. The
+ID token's signature is verified against the provider's JWKS (RS, PS, ES and EdDSA; never `none`
+or HS), and `iss`, `aud`/`azp`, `exp`, `iat`, `nbf` and the `nonce` have to match. The callback is
+rate-limited per address, and wrong states and tokens count toward the same pause as wrong
+passwords. A failure is in the activity log with the check that refused it.
+
+#### Recipes
+
+Each provider below needs the client described above: authorization code, PKCE allowed, the
+redirect URI `https://gym.example.com/api/oidc/callback`, scopes `openid profile email` plus
+whatever carries groups.
+
+**Authentik.** Applications → Create with provider → OAuth2/OpenID Provider. Client type
+confidential, redirect URI as above, signing key set (any certificate; without one Authentik signs
+with HS256, which openGym refuses). The default `profile` scope mapping sends `groups`.
+
+```bash
+OIDC_ISSUER=https://authentik.example.com/application/o/opengym/
+OIDC_CLIENT_ID=<client id>
+OIDC_CLIENT_SECRET=<client secret>
+OIDC_LABEL=Authentik
+OIDC_ALLOWED_GROUPS=opengym
+```
+
+**Authelia.** In `configuration.yml`, under `identity_providers.oidc.clients`:
+
+```yaml
+- client_id: opengym
+  client_name: openGym
+  client_secret: '$pbkdf2-sha512$...'   # authelia crypto hash generate
+  authorization_policy: one_factor
+  require_pkce: true
+  pkce_challenge_method: S256
+  redirect_uris: ['https://gym.example.com/api/oidc/callback']
+  scopes: [openid, profile, email, groups]
+  token_endpoint_auth_method: client_secret_basic
+```
+
+```bash
+OIDC_ISSUER=https://auth.example.com
+OIDC_CLIENT_ID=opengym
+OIDC_CLIENT_SECRET=<the secret before hashing>
+OIDC_SCOPES=openid profile email groups
+OIDC_LABEL=Authelia
+OIDC_ALLOWED_GROUPS=opengym
+```
+
+Authelia sends groups from userinfo, which openGym reads by itself.
+
+**Keycloak.** Clients → Create client, OpenID Connect, client authentication on, standard flow
+on, valid redirect URI as above, Advanced → PKCE method S256. For groups add a mapper (Client
+scopes → `<client>-dedicated` → Add mapper → Group Membership, token claim name `groups`, full
+group path off), or use realm roles:
+
+```bash
+OIDC_ISSUER=https://keycloak.example.com/realms/home
+OIDC_CLIENT_ID=opengym
+OIDC_CLIENT_SECRET=<credentials tab>
+OIDC_LABEL=Keycloak
+OIDC_ALLOWED_GROUPS=opengym          # with the group mapper
+# or: OIDC_GROUPS_CLAIM=realm_access.roles and a realm role
+OIDC_LOGOUT=1                        # Keycloak has an end_session_endpoint
+```
+
+**voidAuth.** Admin → OIDC Apps → Add, redirect URL as above, auth method `client_secret_basic`,
+PKCE allowed. voidAuth sends the user's groups in `groups` with the `groups` scope. Take the issuer
+from the discovery address voidAuth shows for the app (the part before `/.well-known/...`).
+
+```bash
+OIDC_ISSUER=https://voidauth.example.com/oidc
+OIDC_CLIENT_ID=opengym
+OIDC_CLIENT_SECRET=<client secret>
+OIDC_SCOPES=openid profile email groups
+OIDC_LABEL=voidAuth
+OIDC_ALLOWED_GROUPS=opengym
+```
+
+**Pocket ID.** OIDC Clients → Add, callback URL as above. Pocket ID clients can be public (PKCE
+only, leave the secret out); groups come with the `groups` scope, and "Allowed user groups" on the
+client already limits who Pocket ID lets through.
+
+```bash
+OIDC_ISSUER=https://id.example.com
+OIDC_CLIENT_ID=<client id>
+OIDC_SCOPES=openid profile email groups
+OIDC_LABEL=Pocket ID
+OIDC_ALLOWED_GROUPS=opengym
+```
+
+**If it does not work.** Admin → Identity provider says whether the discovery document and the
+keys came through. "the discovery document names another issuer": `OIDC_ISSUER` has to be the
+exact `issuer` in `/.well-known/openid-configuration` (a trailing slash does not matter, a path
+does). A sign-in that comes back with "could not verify" is in the activity log as
+`auth.oidc.fail` with the check: `signature` or `alg` is usually an HS256 client (give it a
+signing key), `audience` a client id mismatch, `expired` a clock that is off on one of the two
+machines. "came from another tab" means the callback arrived in a browser without the cookie from
+the start, often a redirect URI pointing at another host name than the one you opened.
+
+## 5. Fitting it into an existing stack
+
+Running Kubernetes? Example manifests (Deployment, PVCs, Service, Gateway API route) are in
+`kubernetes/`, described in [SELF_HOSTING_KUBERNETES.md](SELF_HOSTING_KUBERNETES.md).
+
+The defaults assume openGym is the only thing here: a service called `api` on port 3000, and nginx
+on port 80 inside its container. If you are merging this into a compose file that already has an
+`api`, or you put the web container behind your own reverse proxy on a different port, four
+settings in `.env` move those without editing any config file:
+
+```bash
+WEB_PORT=8080              # host port — what you browse to
+NGINX_PORT=80              # port the web container listens on, inside the container
+BACKEND=api                # name of the API service that /api is proxied to
+PORT=3000                  # port the API listens on; web proxies to the same value
+RESOLVER=127.0.0.11        # DNS nginx resolves BACKEND with — Docker's, unless you are not on Docker
+BASE_PATH=                 # subpath openGym is served under, e.g. /gym — see below; empty = site root
+SESSION_DAYS=90            # how long a sign-in lasts
+```
+
+`NGINX_PORT` stays 80 under Docker. The web container runs as an unprivileged user (uid 101),
+which can bind a port below 1024 only because Docker sets `net.ipv4.ip_unprivileged_port_start=0`
+in the container. On another runtime (Kubernetes, rootless Podman) set `NGINX_PORT` to 1024 or
+higher, e.g. 8080, or set that sysctl yourself; the Helm chart and `kubernetes/` use 8080.
+
+`RESOLVER` only matters off Docker. nginx re-resolves `BACKEND` on every `/api` request so a
+recreated API container does not leave it proxying to a dead IP, and `127.0.0.11` is where
+Docker answers those lookups. Nothing listens there on another runtime, and an unreachable
+resolver does not fail fast — every `/api` request hangs until it times out. On Kubernetes set
+it to the cluster DNS service address (`kubectl -n kube-system get svc kube-dns`, commonly
+`10.96.0.10`); under Podman, to whatever its network provides.
+
+`SESSION_DAYS` is how long a browser sign-in and a phone pairing last, counted from when they
+were issued; lowering it never cuts an existing session short. A browser renews its session by
+signing in; a paired phone renews its token by itself whenever it starts past half of that
+time, so only a phone left unopened for longer than `SESSION_DAYS` has to be paired again.
+
+The web container sends a Content-Security-Policy that lets scripts run only from your instance
+(plus the app's one inline script, by its hash), so a script that found its way into a page does
+not run. The only frame it allows is YouTube's privacy-enhanced player (`www.youtube-nocookie.com`),
+for an exercise's video link once someone taps play; leave that in a policy of your own if you want
+those videos to play in the app. Requests the app makes itself stay open: the Coach on a device talks to whatever provider
+you chose, a LAN Ollama included. If your reverse proxy injects a script of its own (analytics,
+say), it gets blocked; give the `web` service a policy that allows it in `environment:`, or
+`CONTENT_SECURITY_POLICY=frame-ancestors 'none'` for the old, minimal header. The default is in
+`web/Dockerfile`.
+
+The web image renders its nginx config from these when the container starts, so they take effect
+on a **prebuilt image** — no rebuild. `BACKEND` and `PORT` together are what `/api` is proxied to,
+so they have to name a service the web container can actually reach on your compose network.
+
+Note the difference from `VITE_IMG_BASE` / `VITE_GIF_BASE` (see Troubleshooting): those are
+build-time values baked into the frontend bundle, and setting them next to `docker compose` does
+nothing to an image you pulled.
+
+### On a NAS (Synology, QNAP, Unraid, TrueNAS)
+
+A NAS runs openGym like any other Docker host. What trips people up is the NAS's own compose UI,
+which is not quite `docker compose` in a folder you chose. Four things to get right:
+
+**1. Both services, every time.** openGym is `api` *and* `web`. A stack with only `web` still
+loads, but every sign-in fails and the only way in that works is **Continue without account**:
+you are a guest, your data lives in that one browser, and nothing reaches the NAS. If the
+sign-in screen never accepts anything, check that `docker ps` shows both containers.
+
+**2. Absolute paths.** Container Station, Container Manager and Portainer keep the compose file
+in a folder of their own, so `./data` and `env_file: .env` resolve somewhere you did not put
+them. Spell them out (here for QNAP; use your share's path):
+
+```yaml
+name: opengym
+services:
+  api:
+    image: ghcr.io/duartesantos8/opengym-api:latest
+    restart: unless-stopped
+    env_file: /share/Container/opengym/.env
+    environment:
+      - PORT=3000
+      - DATA_DIR=/data
+      - TRUST_PROXY=1
+    volumes:
+      - /share/Container/opengym/data:/data
+  web:
+    image: ghcr.io/duartesantos8/opengym-web:latest
+    restart: unless-stopped
+    depends_on: [api]
+    ports:
+      - "3030:80"
+    environment:
+      - BACKEND=api
+      - PORT=3000
+```
+
+Typical roots: Synology `/volume1/docker/opengym`, QNAP `/share/Container/opengym`, Unraid
+`/mnt/user/appdata/opengym`, TrueNAS SCALE a dataset such as `/mnt/tank/apps/opengym`. Create the
+`data` folder and the `.env` file there first. On TrueNAS SCALE 24.10 and later this file goes in
+**Apps → Discover Apps → ⋮ → Install via YAML**; on Synology in **Container Manager →
+Project → Create**; on Unraid in the Compose Manager plugin. Unraid's single-container templates
+can work too, as long as both containers share one custom network and `BACKEND` names the API
+container.
+
+**3. ORIGIN is the address you type.** Pick the port on the left of `ports:` (`3030` above, any
+free one: DSM itself sits on 5000/5001, QNAP's on 8080) and put the exact address in `.env`:
+
+```env
+ORIGIN=http://10.11.0.4:3030
+RP_ID=10.11.0.4
+```
+
+Get this wrong and every save is refused. The app says "This server only takes changes made
+at ...", and `docker compose logs api` prints a `refused cross-origin` line with the `ORIGIN=`
+and `RP_ID=` to set. After changing `.env`, recreate the stack (Container Station's **Recreate**,
+Container Manager's **Build**, or `docker compose up -d`); a plain restart keeps the old values.
+Over plain http on a LAN address there are no passkeys (see [§2](#2-understand-the-passkey-requirement-important)),
+so for a first look either add `PASSWORD_LOGIN=1` ([password sign-in](#password-sign-in-optional))
+or keep going to step 4.
+
+**4. HTTPS through the NAS's reverse proxy.** For passkeys, the iPhone web app and
+notifications, give openGym a hostname with a certificate and point the proxy at the `web`
+port: Synology **Control Panel → Login Portal → Advanced → Reverse Proxy** (certificate under
+**Security → Certificate**), QNAP **Network & File Services → Network Access → Reverse Proxy**,
+Unraid and TrueNAS with Nginx Proxy Manager, Caddy or SWAG, or a Cloudflare Tunnel or Tailscale
+Serve from [§3](#3-expose-it-over-https-on-your-own-domain). Then `ORIGIN` and `RP_ID` become that
+hostname, and the LAN address stops being a way in.
+
+**Permissions.** The `api` container runs as root and writes everything under `data/`; its
+`secret`, `db.json` and `coach.json` end up root-owned with mode 600. A share mounted over NFS
+with root squash, or a TrueNAS dataset whose ACL maps root away, refuses those writes, and the
+API log says `EACCES` or `EPERM`. Give the dataset to root, or run `api` with `user: "568:568"`
+(TrueNAS's `apps` user, say) and make `data/` that user's first. Coach providers with an API key
+work either way; only the in-container CLI runtimes (`API_TARGET=coach`) need root. Your backup
+job reads `data/` as root, or as that user.
+
+### Serving openGym under a subpath
+
+openGym can live at `https://example.com/gym/` rather than on a host of its own. Which of the two
+setups below you need depends on one thing: whether your reverse proxy strips the prefix before
+the container sees the request.
+
+**The proxy strips the prefix** (Caddy's `handle_path`, Traefik's `StripPrefix` middleware,
+nginx `proxy_pass` with a trailing slash). Nothing to configure. The app's assets are relative
+and it asks its own address for the API, so everything stays inside the prefix on its own:
+
+```caddy
+example.com {
+    handle_path /gym/* {
+        reverse_proxy opengym-web:80
+    }
+}
+```
+
+**The proxy passes the prefix through.** Tell the web container what it is, without a trailing
+slash:
+
+```bash
+BASE_PATH=/gym
+```
+
+That is a start-up setting like the others above, so it works on a prebuilt image. Forward only
+the prefix to the container — openGym does not serve itself at the site root as well, and a copy
+reached there would look for an API that is not on that path.
+
+Either way, keep `ORIGIN` and `RP_ID` pointing at the address in the browser's bar
+(`ORIGIN=https://example.com`, `RP_ID=example.com`). Passkeys key on the host, not the path, so a
+subpath changes nothing about section 2 — but it does mean two instances under one hostname share
+a passkey scope and can see each other's credentials. Give each its own hostname if that matters.
+
+#### nginx under `/gym`, both ways
+
+Pick one of these two and keep `.env` in step with it. Both were run against the shipped web
+container's config behind nginx with TLS, with a passkey sign-up and a password sign-up going
+through each. `8080` is `WEB_PORT`; use yours.
+
+**Passing the prefix through** (nothing after the port in `proxy_pass`), with `BASE_PATH=/gym`:
+
+```nginx
+location = /gym { return 301 /gym/; }
+
+location /gym/ {
+    proxy_pass http://127.0.0.1:8080;   # no trailing slash: the container sees /gym/...
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    client_max_body_size 112m;           # photos and videos of custom exercises
+    proxy_read_timeout 300s;            # a Coach request can take minutes
+}
+```
+
+```bash
+# .env
+BASE_PATH=/gym
+RP_ID=example.com
+ORIGIN=https://example.com
+```
+
+**Stripping the prefix** (a slash after the port), with `BASE_PATH` left empty:
+
+```nginx
+location = /gym { return 301 /gym/; }
+
+location /gym/ {
+    proxy_pass http://127.0.0.1:8080/;  # trailing slash: the container sees /...
+    proxy_redirect / /gym/;             # keeps the container's own redirects under /gym
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    client_max_body_size 112m;
+    proxy_read_timeout 300s;
+}
+```
+
+```bash
+# .env
+BASE_PATH=
+RP_ID=example.com
+ORIGIN=https://example.com
+```
+
+Then `docker compose up -d` (a plain `restart` does not re-read `.env`). The three ways this
+goes wrong, so you can spot them:
+
+- **Stripping and `BASE_PATH=/gym` at the same time.** The page loads, so it looks fine, but
+  every `/api` call answers 404: no profile can be created and nothing signs in. One or the
+  other, never both.
+- **A path in `ORIGIN`.** `ORIGIN=https://example.com/gym` makes every passkey fail with
+  *Unexpected registration response origin*. An origin never has a path; the prefix lives in
+  `BASE_PATH` and in the proxy.
+- **`proxy_cookie_path / "/gym; Secure";`** Leave it out. Over https the session cookie is
+  called `__Host-gymsid`, and browsers throw away any `__Host-` cookie whose path isn't `/`. The
+  profile gets created, then the app insists you're not signed in. The cookie is already
+  `Secure`, `HttpOnly` and tied to its host without help.
+
+### Photos and videos of custom exercises
+
+Anyone signed in can give an exercise they made one photo, GIF or short video (and, separately,
+a link, which the server never fetches), attach up to six photos or videos to a logged
+workout (a progress photo, a form-check clip), and film a set during a workout: one video per
+set, up to 24 per workout, shown beside the set and lined up per exercise to compare two dates.
+All of them share one quota and one set of limits. A set video filmed with **Keep videos on this
+phone only** on (or for a server from before v1.4.4, whose `/api/config` does not say
+`media.sets`) never reaches the server at all.
+The file is uploaded to this server and stored under
+`./data/uploads/<profile id>/`, named by its SHA-256. Only its owner can download it again — no
+admin route, no Coach, no MCP tool (it is told how many sets were filmed, nothing more), no
+PDF or shared plan reads it, and a share card only shows a workout photo you picked for it
+yourself, drawn on your device. It is on by default, with these limits, all
+set in `.env`:
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `MEDIA_UPLOADS` | `1` | `0` removes the upload routes; the app then offers the link field only |
+| `MEDIA_QUOTA_MB` | `200` | space per profile; `0` = no cap |
+| `MEDIA_IMAGE_MAX_MB` | `2` | a photo after the app shrank it to 1600 px, and every thumbnail |
+| `MEDIA_GIF_MAX_MB` | `8` | an animated GIF |
+| `MEDIA_VIDEO_MAX_MB` | `100` | a video as kept: the app first shrinks one over 12 MB to 1280 px where the browser can write MP4 (Safari, Chrome), and one over this cap where it can only write WebM; a clip it cannot shrink goes up as recorded |
+| `MEDIA_VIDEO_MAX_SEC` | `60` | a video's length |
+| `MEDIA_AUDIO_MAX_MB` | `2` | a sound of one's own for the rest timer: the app keeps it as a WAV of at most 30 s (1.3 MB) |
+| `MEDIA_GC_GRACE_DAYS` | `14` | how long a file nobody uses any more is kept |
+| `MEDIA_UPLOADS_PER_HOUR` | `600` | uploads per profile per hour; at most two run at once |
+| `MEDIA_MIN_FREE_MB` | `512` | uploads are refused while the disk under `./data` has less free; `0` = no floor |
+| `MEDIA_UPLOAD_MAX` | `112m` | the web container's body limit on `/api/media/` (nginx syntax); keep it above `MEDIA_VIDEO_MAX_MB` |
+
+Every MB here is 1024 × 1024 bytes. The API reads the `MEDIA_*` caps; the app gets them from
+`/api/config` and refuses a file the server would refuse before uploading it.
+
+**Disk.** The worst case is `MEDIA_QUOTA_MB` times the number of profiles. On an instance with
+open signup, lower the quota. `MEDIA_MIN_FREE_MB` stops uploads before they fill the disk — a
+full disk is also a state save that cannot land, for everybody.
+
+**A reverse proxy in front** has to let the uploads through, or they fail with a 413 or a
+timeout the app can only report as "The server refused the file as too large":
+
+- **Body size**: at least `MEDIA_VIDEO_MAX_MB` on `/api/media/`. nginx allows 1 MiB unless told
+  otherwise (`client_max_body_size`); Cloudflare's free plan caps a request at 100 MB.
+- **Timeouts**: a 40 MB video over a slow mobile uplink takes minutes. Traefik v3 cuts a request
+  whose body is still arriving after its entryPoint's `readTimeout`, 60 s by default — raise
+  `entryPoints.<name>.transport.respondingTimeouts.readTimeout` (`600s`, say). nginx's
+  `client_body_timeout` counts the gap between two reads, so its default of 60 s is fine. The
+  API itself gives a request 30 minutes and drops one that sends nothing for 60 s.
+- **Content-Security-Policy**: the web container already sends one that allows this. If the
+  proxy adds its own, it must allow `blob:` in `img-src` and `media-src`. The app shows the files from its own verified local copy through `blob:` URLs.
+
+**What is removed, and when.** A file goes when its owner's stored state has not used it for
+`MEDIA_GC_GRACE_DAYS` (checked every hour), after one hour unused when the owner's quota is full,
+at once when the owner uses "Reset everything", and with the profile when an admin deletes it.
+Nothing is deleted because a state file does not parse or a profile is missing from `db.json`: a
+folder whose profile is not in `db.json` is left alone and logged once. A device that still has a
+file the server removed uploads it again.
+
+**Privacy.** The app re-encodes photos on the device, so no EXIF or GPS data survives, and blanks
+the metadata boxes and the GPS/telemetry tracks of MP4 and MOV videos (a fragmented MP4 that
+carries such a track is refused rather than uploaded with it). WebM videos are uploaded as
+recorded. The server never decodes or changes a file. Like everything else in `./data`, the files
+are not encrypted at rest — whoever can read that folder can see them.
+
+## 6. Backups
+
+Everything is in `./data`:
+
+```bash
+tar czf opengym-backup-$(date +%F).tar.gz data/
+```
+
+That archive contains all profiles, passkeys and workout history — and, if the activity log is
+on, `audit.log` with everyone's sign-in times. Worth knowing before you ship the archive to a
+backup service you don't run. Restore by unpacking it back into the project folder. (Individual
+users can also export their own data as JSON from Settings → Data & backup.)
+
+The photos and videos of custom exercises are in `data/uploads/`, and they are most of what makes
+the archive large. To leave them out:
+
+```bash
+tar czf opengym-backup-$(date +%F).tar.gz --exclude=data/uploads data/
+```
+
+Restored without them, every profile is intact, and an exercise whose file is gone shows a
+placeholder until one of its owner's devices — each keeps its own copy — uploads it again. When
+you move openGym to another server, copy the whole `data/`, `uploads/` and `shared/` included; each person can
+also carry their own through Settings → Data & backup → *Export with photos & videos* and import it there.
+
+If you enabled the AI Coach with the Codex provider, note what this archive deliberately does
+**not** contain: `./coach-auth`, where that provider keeps its refreshable sign-in. It is a
+sibling of `./data` rather than a folder inside it precisely so that a live credential does not
+end up in every backup you are told to make — an archive like this gets copied to laptops and
+cloud drives, and a refresh token keeps working wherever it lands. Nothing in `./coach-auth`
+needs backing up: if you lose it, sign the provider in again.
+
+Webhooks (`data/integrations/`) are in the archive too, their URLs and signing secrets encrypted
+with `data/secret` like the Coach's keys: restore both together, or every webhook has to be added
+again.
+
+API keys for the HTTPS providers (Anthropic, OpenAI, Gemini, a compatible endpoint) are the
+other way round: they are in `./data/coach.json`, encrypted with `./data/secret`, so they *are*
+in this archive — and unreadable without the secret next to them, like everything else in it.
+
+## 7. Notifications
+
+openGym can push two kinds of alert to your phone/desktop, even when the app isn't open:
+rest-timer-over, and a reminder on days you have a workout planned but haven't logged one yet.
+Turn it on per-profile in **Settings → Reminders** (requires a signed-in passkey profile and
+HTTPS — see section 3).
+
+No setup needed server-side, and nothing to configure per timezone: VAPID keys are generated on
+first run and saved to `./data/vapid.json`, and each user's browser reports its own timezone
+automatically when they turn the reminder on — it fires at their local time, and follows them if
+they travel, regardless of what timezone the server itself runs in.
+
+Under the reminder there is an opt-in **missed-workout nudge** ("Nudge me when I skip a planned
+workout", with a tone: Friendly, Guilt trip or Drill sergeant). It is one push on the evening of a
+planned day with no workout logged: from 20:00 on the user's clock (or 2 hours after the reminder,
+if that is later) until 21:30, and not while a workout is on screen. A rest day never gets one, a
+coach week or rotation only counts the second day off in a row, and after 3 missed days in a row
+it goes quiet until the next workout is logged. Like the reminder it needs the push subscription
+and the reminder switched on; the text is localized from the user's app language.
+
+Where it works: any desktop browser, Android Chrome, and on iOS only the app **added to the Home
+Screen** (Safari in a tab has no Web Push). The Android APK's day reminder is a local
+notification. Its rest timer is a local alarm: the notification shade shows the time left as a
+shrinking bar, and the end alert still fires with the screen off. The lock screen shows that
+notification only when notifications are enabled and the system is set to show them there. A paired account still gets the server push if that alarm
+cannot be scheduled. A reminder that was due while the server was down or
+restarting is still sent up to 15 minutes late, once; the browser re-registers its subscription
+with the server on every signed-in start, so a subscription the server lost heals itself.
+
+**Keep screen awake** (Settings → *Workout*) has the same transport requirement: the
+Wake Lock API is only available over HTTPS or on `http://localhost`, so on a plain-LAN-IP
+instance the switch shows as unsupported. Nothing to configure server-side either way, and iOS
+refuses the lock while the phone is in Low Power Mode.
+
+Push services like a contact address for whoever runs the server, in case they ever need to reach
+you about your pushes. openGym sends your `ORIGIN` by default; set `VAPID_SUBJECT=mailto:you@example.com`
+in `.env` if you would rather they had an inbox.
+
+### Push endpoints on private addresses (`ALLOWED_PRIVATE_IPS`)
+
+The api container resolves push service domains to the IPs. Private IPs are banned by default.
+But some DNS setups resolve public domains to private addresses on purpose, for example FakeDNS, a DNS-based proxy or a
+split-horizon resolver.
+Push then fails and the api log shows `refusing to connect to a private address`.
+
+Set `ALLOWED_PRIVATE_IPS` in `.env` to the private addresses that are safe to reach:
+
+```
+ALLOWED_PRIVATE_IPS=198.18.0.0/15
+ALLOWED_PRIVATE_IPS=10.0.0.0/8, 192.168.1.50, 172.16.0.1-172.16.0.9, fd00::/8
+```
+
+- Separate entries with commas or spaces.
+- An entry is a single IP address, a range (`first-last`) or a CIDR block. IPv4 and IPv6 both work.
+- An IPv4 entry also covers the same address written as IPv4-mapped IPv6 (`::ffff:10.1.2.3`).
+- The default is empty: every private address stays blocked. Keep the list as small as you can —
+  each address you allow is an address that a signed-in user can make the server connect to.
+
+### Integrations: webhooks (`INTEGRATIONS`)
+
+Settings → Integrations works on every instance for what lives on the phone or in the browser
+(Apple Health, Health Connect, the imports, the CSV export). Webhooks are sent by the server, so
+you switch them on:
+
+```
+INTEGRATIONS=webhook
+```
+
+Each profile can then add up to 10 webhook URLs that get a signed JSON message when a workout is
+finished, a record falls or a weigh-in is logged, from whichever device it was logged on. The URLs
+follow the push endpoint rules above (HTTPS, no private addresses, checked again at connect time,
+no redirects). For Home Assistant or Node-RED on your own network:
+
+```
+INTEGRATIONS_ALLOW_LAN=1
+```
+
+opens the home network's addresses, plain `http://` to them included, never loopback or
+link-local. Every signed-in user can then make the server call into your network, so keep it for
+instances whose users you trust. Connections live in `data/integrations/`, the URL and the signing
+secret encrypted with a key from `data/secret`. Payloads, signatures and retries are in
+[INTEGRATIONS.md](INTEGRATIONS.md).
+
+### The community library (`LIBRARY`)
+
+```
+LIBRARY=on
+```
+
+turns on Community: people can share exercises, plans, sounds, gym profiles, tips, looks and
+measurement fields with everyone on this server, one item at a time after a consent, and others
+take a copy into their own profile. Off by default: then there are no routes and nothing of it in
+the app. Items live in `data/shared/items.json` (with `items.json.bak`), their files in
+`data/shared/media/`, apart from `data/uploads/`, and removed files on `data/shared/blocklist.json`.
+Put `data/shared/` in your backups with the rest of `data/`.
+
+```
+SHARE_REVIEW=on              # every new item (and new version) waits for an admin's approval
+SHARE_PERSONAL_MEDIA=on      # workout photos, progress photos and form videos can be shared too (always reviewed)
+SHARE_TYPES=sound,exercise   # only these kinds (default: all of them)
+SHARE_QUOTA_MB=50            # per person, across everything they share; 0 = no cap
+SHARE_VIDEO_MAX_MB=25        # tighter than private uploads: many people load a shared video
+SHARE_AUTOHIDE_REPORTS=3     # reports from different people before an item steps out of sight
+SHARE_ITEMS_PER_TYPE=50      # per person and kind
+SHARE_GC_GRACE_DAYS=14       # a withdrawn item's files stay this long
+SHARING=off                  # closes the library even with LIBRARY=on
+```
+
+Moderation is in the admin dashboard (card Community): reported items, items waiting for review,
+and everything, with approve, hide, restore, remove and pausing sharing for a person, each with a
+reason in the activity log. Removing deletes the files from `data/shared/media/` and from the
+upload folder of everyone who took a copy, and blocks them by checksum. The licensed exercise media
+of the built-in catalogue can never be shared: `api/library/catalogue-hashes.json` lists the
+SHA-256 of every catalogue file (`node scripts/catalogue/media-hashes.mjs` makes it from the bytes
+alone). As the host you answer for what people share: say in your terms how to report something
+and that you remove it when told. Details: [dev/SHARED-LIBRARY-API.md](dev/SHARED-LIBRARY-API.md).
+
+### Trainers and gyms (`TRAINERS`) and what admins see (`ADMIN_DATA_VIEW`)
+
+```
+TRAINERS=on
+```
+
+turns on gyms (studios), gym leads and trainers. An admin creates gyms in the admin dashboard and
+gives people the lead or trainer role, or allows someone to train freely without a gym. A trainer
+hands out a code (or its QR), and a member decides on a consent screen, per category, what that
+trainer may see, suggest or change. With a gym trainer the gym lead gets a row of its own, never
+more than see, and the member can switch any category off. The member can change it or
+disconnect any time, and it counts on the trainer's next request. Everything lives in
+`data/org.json` (with `org.json.bak`) and one sharing log per member in `data/share/`; put both in
+your backups. Off by default: then none of it shows anywhere.
+
+```
+TRAINERS_LEAD_ACCESS=row     # row (default) | mirror | none
+SHARE_LOG_DAYS=365           # how long a member's sharing log keeps its lines, 0 = forever
+```
+
+`TRAINERS_LEAD_ACCESS` decides how the gym lead sees a member: `row` is its own consent row,
+pre-filled from the trainer's read levels; `mirror` always shows the lead what the trainer sees
+(capped at see); `none` shows the lead names only. Details and the API are in
+[TRAINERS.md](TRAINERS.md).
+
+Trainers and gym leads get the trainer dashboard (Settings → Account → Trainer dashboard). A
+trainer's change to a member's plan or weigh-ins is written on the server and reaches the
+member's devices on their next sync check like a change from another device; the member can undo
+each one for 30 days. Members are told by push when a connection is made or their sharing
+changes, so give the server push keys as for reminders (it does without, the notice in the app
+stays). To fill the nutrition category from openNutrition:
+
+```
+NUTRITION_SOURCE=opennutrition
+NUTRITION_URL=https://nutrition.example.com
+```
+
+Since 1.4.5 the admin dashboard no longer shows anyone's workouts or weigh-ins: the user detail
+has counts, storage and last sync only. The data is still readable on disk by whoever runs the
+server, just not in the app. For a small instance that liked the old view:
+
+```
+ADMIN_DATA_VIEW=on
+```
+
+brings back the workout history and the weigh-ins, and every look is written to the activity log
+and to that member's own sharing log.
+
+## 8. Updating
+
+Running prebuilt images:
+
+```bash
+git pull                    # picks up compose/config changes
+docker compose pull
+docker compose up -d
+```
+
+Building from source instead:
+
+```bash
+git pull
+docker compose up -d --build
+```
+
+The app shell is versioned (`?v=N`) so clients pick up changes on next load. Your `./data` is
+untouched; the exercise media come with the new image.
+
+## Passkeys fail even though `RP_ID` looks right
+
+The most common support question, and the values are usually *nearly* correct. Work through
+these in order — the first two account for most of it.
+
+**1. Ask the server what it actually loaded.** It prints both values on startup:
+
+```
+docker compose logs api | grep 'gym-api on'
+# gym-api on :3000 (rpID=gym.example.com, origin=https://gym.example.com)
+```
+
+If that disagrees with your `.env`, the container is still running the old environment.
+`docker compose restart` does **not** re-read `.env` — use `docker compose up -d`.
+
+**2. Check the exact shape of each value.** They are not the same kind of string:
+
+| | Correct | Wrong |
+|---|---|---|
+| `RP_ID` | `gym.example.com` | `https://gym.example.com`, `gym.example.com:8080`, `gym.example.com/` |
+| `ORIGIN` | `https://gym.example.com` | `gym.example.com`, `https://gym.example.com/` |
+
+`RP_ID` is a bare hostname: no scheme, no port, no trailing slash. `ORIGIN` is the full origin
+*with* the scheme and *without* a trailing slash. Both must match your address bar exactly.
+
+**3. Behind a tunnel or reverse proxy, use the public hostname.** With Cloudflare Tunnel,
+Traefik, nginx or Caddy in front, the browser only ever sees the public name — so that is what
+both values must be. Not the container name, not the LAN IP, not the internal port:
+
+```env
+RP_ID=gym.example.com
+ORIGIN=https://gym.example.com
+```
+
+The tunnel's own route may point wherever it likes (`http://localhost:8080` is fine). It is the
+browser-facing name that has to appear here.
+
+**4. `www.` is a different host.** A passkey registered on `gym.example.com` will not work on
+`www.gym.example.com`. Pick one and redirect the other.
+
+**5. Changing the hostname invalidates existing passkeys.** They were bound to the old one, so
+everybody registers again — which is why it pays to settle the domain before others join.
+
+> On a LAN without certificates there is nothing to configure that makes passkeys work over
+> plain `http://192.168.x.x`: browsers only allow WebAuthn on HTTPS (or `localhost`). Use guest
+> mode, the standalone mobile app (`docs/MOBILE.md`), or put a certificate in front of it.
+
+## Which passkey providers work
+
+openGym asks for a passkey and nothing more specific: no particular kind of device, no platform
+authenticator, no attestation, and sign-in lets the browser offer any passkey it can find for
+your hostname. So whatever stores passkeys on your device works, and which one you get is
+decided by your operating system and browser, not by openGym. The common questions:
+
+**Can I keep my passkey in Bitwarden, 1Password, Proton Pass or another password manager on
+Android?** Yes, on Android 14 or later. Switch the app on as a passkey provider in the system
+settings (*Passwords, passkeys & accounts*, or *Passwords & accounts*; the name varies by
+manufacturer). The system then offers that app when openGym asks to create or use a passkey. If
+Chrome keeps offering only Google Password Manager, look under *Autofill services* in Chrome's
+own settings for the option to use another service. On Android 13 and earlier, passkeys can only
+be stored in Google Password Manager. (#101)
+
+**Firefox on Windows 10 does not offer a QR code to sign in with my phone.** Firefox on Windows
+hands passkeys to Windows' own dialog, and the Windows 10 dialog has no *use a phone* option;
+Windows 11 added it. On Windows 10, sign in with Chrome or Edge, which show their own QR code, or
+keep the passkey in a password manager that has a Firefox extension — or give that PC a passkey
+of its own (Windows Hello works in Firefox) with a code from your phone, below. (#103)
+
+**Can one profile have more than one passkey?** Yes. **Settings → Account → Passkeys** lists
+them — a name, when each was added and last used — and adds, renames or removes one. Adding one
+from there is for anything this browser can reach: another password manager, a security key, or
+your phone through the browser's own QR prompt. For a second device that can open openGym itself
+(a phone, a work laptop), use **Settings → Account → Add another device**: it shows a code of 12
+characters and a QR code of a link that carries it. Scan it with the other device, or type the
+code there under **Use a code from your other device** on the sign-in screen; the other device
+then creates a passkey of its own and is signed in by it. So a Windows Hello passkey on a PC and
+the phone's own passkey can sign in to the same profile, instead of the phone ending up with a
+second, empty one. (#95)
+
+The device that makes the code has to be signed in to this server. A phone app that keeps
+everything on the phone has no account here and so no such row: connect it first under
+**Settings → Account → Connect to my server**, and the row shows up in its Server & sync block. (#551)
+
+Both ways ask you to confirm first — with a passkey the profile already has, or its password
+while `PASSWORD_LOGIN=1` — because each adds a lasting way in: a session on its own may be a
+copied cookie. Removing a passkey asks for the same, since a copied cookie could otherwise pick
+which of your passkeys is left. The code works
+once, for ten minutes, and is stored only as a hash; making a new one, signing out everywhere or
+changing the password voids it. Wrong codes count toward a per-address pause of code redemption,
+like wrong reset codes, and every passkey added or removed and every code made or used is in the
+activity log (`auth.passkey.*`, `auth.link.*`).
+
+The last way into a profile cannot be removed: its only passkey stays unless a password can sign
+in instead, which counts only while `PASSWORD_LOGIN=1`. Removing a passkey stops it signing in,
+but it does not end a session it already opened — sessions are not tied to one passkey. If the
+device is lost, remove its passkey *and* use **Sign out everywhere**.
+
+**Where does my passkey live?** Where you created it, and wherever that store syncs: Google
+Password Manager to Chrome on your other devices signed in to the same Google account, iCloud
+Keychain to your Apple devices, a password manager to every device it runs on. A passkey kept
+only on one phone (or on a hardware key) goes with that phone.
+
+**I lost my passkey.** If the profile has another passkey, sign in with that one and remove the
+lost one under **Settings → Account → Passkeys**, confirming with the passkey you signed in
+with (then **Sign out everywhere**). A browser that is still signed in can give a new device a
+passkey with **Add another device** (making the code asks for a passkey, or the current password
+where that counts, because a session on its own may be a stolen cookie). The sign-in screen's
+**Lost access?** walks through these. If none of them is left, ask for a recovery code (below).
+When you ask your admin for help, the id under **Settings → Account → Account ID** tells them
+exactly which account is yours. Adding a second passkey early is what keeps one lost phone from
+being a lost profile.
+
+#### Recovery codes: when every way in is gone
+
+For someone who lost every device and passkey and has no password, on any instance, with or
+without `PASSWORD_LOGIN`:
+
+- **An admin** opens the profile in the admin dashboard and taps **Recovery code**. Any admin can
+  make one for a profile that is not an admin; only the owner for an admin; nobody for the owner
+  (see below), and nobody for themselves.
+- **The person** taps **Lost access? → I have a code** on the sign-in screen (or **Use a code from
+  your other device**) and enters it. The device they use gets a new passkey for their profile
+  and is signed in. In the phone app: redeem the code in a browser, then pair the app again.
+  Once back in, they can remove the lost device's passkey under **Settings → Account → Passkeys**
+  and, where `PASSWORD_LOGIN=1`, set a password there too.
+
+A recovery code is 12 characters (60 bits), works once, for 24 hours, and is stored only as a
+hash, like a password reset code. Making one signs the profile out everywhere at once (a lost
+phone should not stay signed in for that day) and voids any device link or pairing code; the
+profile's passkeys and password stay. Wrong codes count toward the same per-address pause as
+wrong reset and device codes, and a wrong code looks the same whoever it was meant for. A
+profile already holding the maximum number of passkeys still gets back in: the passkey used
+longest ago makes room. The activity log records each code made (`admin.recovery.create`,
+`server.recovery.create`) and used (`auth.recovery.ok`).
+
+**The owner, or anyone, from the server itself.** No one in the app may take over the owner's
+login, so the owner's way back is a command on the server, which works for any profile:
+
+```sh
+docker compose exec api node recover.js "Their name"
+# several profiles with that name? it lists them; pick one:
+docker compose exec api node recover.js --id <profile id>
+```
+
+It prints a one-time code to use as above. The command asks the running server for the code over
+a local Unix socket that only the server's own user can open (in the image: root, which is who
+`docker compose exec` runs as; the AI Coach's sandboxed jobs cannot reach it). It never edits
+`db.json` itself, because the server keeps its data in memory and would overwrite such a change
+on its next save. So the server has to be running: `docker compose up -d` first. On Kubernetes:
+`kubectl exec deploy/<deployment> -c api -- node recover.js "Their name"`. Outside Docker, run
+`node recover.js` from the api directory as the same user and with the same `DATA_DIR` as the
+server (or set `ADMIN_SOCKET_DIR` for both).
+
+The phone app never uses a passkey at all: it pairs with a one-time code from a signed-in
+browser (see section 2).
+
+## Troubleshooting
+
+| Symptom | Fix |
+|---|---|
+| No passkey prompt on my phone | You're on `http://` or an IP, not HTTPS. Set up a domain (section 3). |
+| "This server only takes changes made at ...", or `refused cross-origin` in the API log | `ORIGIN` is not the address in your browser. The log line names the `ORIGIN=` and `RP_ID=` to set; then `docker compose up -d`. See [On a NAS](#on-a-nas-synology-qnap-unraid-truenas). |
+| The sign-in screen accepts nothing, only "Continue without account" works | The `api` service is not running or `web` cannot reach it (`BACKEND`, `PORT`). Without it you are a guest and nothing is saved on the server. |
+| "verification failed" on login | `RP_ID`/`ORIGIN` don't match the URL in the address bar. See the section above — start with what the server logged on startup. |
+| Exercise pictures missing | You are on an image older than v1.4.0 or a custom build: `docker compose pull && docker compose up -d`. A source build needs `catalogue/media/` checked out. |
+| Port 8080 already used | Set `WEB_PORT=9090` in `.env` (and update `ORIGIN` for local testing). |
+| A photo or video will not upload ("refused as too large", or it stops partway) | A proxy in front caps the body or cuts the request off: see [Photos and videos](#photos-and-videos-of-custom-exercises) for the body size and timeouts it needs. |
+| No "Reminders" page in Settings | Requires a signed-in profile and HTTPS (or `localhost`) — guest mode and plain HTTP over LAN can't subscribe. |
+| Day reminder fires at the wrong time | Toggle it off and on in Settings → Reminders so it re-detects your browser's timezone (also happens automatically on every app load — see section 7). |
+| Notifications switch is off although I turned it on | The server no longer holds the subscription (rebuilt `data/db.json`, regenerated `vapid.json`); the app re-registers on the next start, or switch it on again. On iOS, push only works from the Home Screen icon. |
+| No Admin dashboard in Settings, so no AI Coach either | Nobody is admin yet. Put your **Settings → Account → Account ID** in `ADMIN_UIDS`, `docker compose up -d`, reload. See [§4](#4-multiple-users). |
+| Under a subpath: the page loads but no profile can be created, or you sign up and are "not signed in" | `BASE_PATH` doesn't match what the proxy does, or `proxy_cookie_path` rewrote the session cookie. See [nginx under /gym](#nginx-under-gym-both-ways). |
+| Want to reset a stuck login | Delete the cookie in your browser; sessions are just signed cookies. |
+| The app says "Your server no longer accepts this phone" (or "this browser") | The server answered 401. Usual causes: "sign out everywhere" was used, the account was disabled, `data/secret` was lost or replaced when the stack was moved (every session and pairing dies with it), or a proxy with its own login rejects requests that carry `Authorization: Bearer`. Nothing on the device is lost: pair the phone again (browser: Settings → "Pair the mobile app"), or sign in again in the browser, and what the device kept is merged into the account. |
+| The app says the server "answered with something other than openGym (HTTP 200)" | Something other than the API answered `/api/*` with a success page — an auth proxy's sign-in page, or a catch-all route serving `index.html`. Every API answer is JSON; forward `/api/*` to the API unchanged. |
+| The app says "Your server answered with an error (HTTP …)" | The code is what the server or its proxy sent: 502/504 usually means the API container is down or unreachable from `web`, 413 that the proxy's upload limit is too small. Changes stay on the device and go through once the server answers. |
+| `docker compose pull` fails with "denied" / "unauthorized" | The prebuilt images aren't published yet, or need to be, or the GHCR package is still private — build from source instead (`docker compose up -d --build`). |
+| Exercise images/GIFs blank when a routine is open | Fixed in current images (issue #79). On an older build, see the note below. |
+| An exercise shows a plain tile instead of its animation when offline | The web app installed on the home screen keeps the media of every exercise in your plan and your current workout, fetched in the background once the app has settled (not on a cellular or Data Saver connection, where the browser says so), plus everything it has shown you, up to 150 MB, across updates. In an ordinary browser tab nothing is fetched ahead: only what it has shown you is kept. An exercise outside your plan that was never shown while online has nothing to show offline. The phone app carries its exercise media inside the package, so it has them offline anyway. |
+
+### `VITE_IMG_BASE` / `VITE_GIF_BASE` are build-time, not run-time
+
+These two are read by Vite when the frontend is **compiled**, so their values are baked into
+the shipped JavaScript bundle. Setting them in the `.env` next to `docker compose` has no
+effect on an already-built image — the bundle has already made up its mind.
+
+They are only useful if you build the frontend yourself (`docker compose up -d --build`, or a
+`npm run build` with the variables exported). If you need to redirect media on a prebuilt
+image, do it in your reverse proxy instead.

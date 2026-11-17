@@ -1,0 +1,23 @@
+{
+  "id": "0798",
+  "name": "stationary bike walk",
+  "bodyPart": "cardio",
+  "equipment": "leverage machine",
+  "machineKind": "cardio",
+  "target": "cardiovascular system",
+  "secondaryMuscles": [
+    "quadriceps",
+    "hamstrings",
+    "calves"
+  ],
+  "category": "cardio",
+  "description": "Pedalling out of the saddle on a stationary bike, standing on the pedals as if walking uphill. It works the legs and raises the heart rate.",
+  "instructions": [
+    "Set a moderate resistance and hold the handlebar.",
+    "Rise off the saddle and stand on the pedals with your body upright.",
+    "Pedal slowly, pushing each pedal down as if climbing stairs.",
+    "Keep your hips over the pedals and your core braced.",
+    "Keep a steady rhythm for the planned time, then sit down to cool off."
+  ],
+  "textSource": "exercisedb"
+}

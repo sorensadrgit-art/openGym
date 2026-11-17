@@ -1,0 +1,22 @@
+{
+  "id": "0572",
+  "name": "lever assisted chin-up",
+  "bodyPart": "back",
+  "equipment": "leverage machine",
+  "machineKind": "assisted-pullup",
+  "target": "lats",
+  "secondaryMuscles": [
+    "biceps",
+    "forearms"
+  ],
+  "category": "strength",
+  "description": "A machine that helps lift your body weight so you can train chin-ups at a lower load. Builds the lats and biceps.",
+  "instructions": [
+    "Set the assistance, then kneel on the pad.",
+    "Grip the close handles with your palms facing you, arms straight.",
+    "Pull yourself up, driving your elbows down toward your sides.",
+    "Bring your chin above the handles.",
+    "Lower slowly until your arms are straight."
+  ],
+  "textSource": "exercisedb"
+}

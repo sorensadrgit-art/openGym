@@ -1,0 +1,21 @@
+{
+  "id": "1636",
+  "name": "cable overhead curl",
+  "bodyPart": "upper arms",
+  "equipment": "cable",
+  "target": "biceps",
+  "secondaryMuscles": [
+    "forearms",
+    "front delts"
+  ],
+  "category": "strength",
+  "description": "A curl with the cable set high so the arms are lifted overhead. It trains the biceps through a short range.",
+  "instructions": [
+    "Set both pulleys high with a handle on each and stand in the middle.",
+    "Hold a handle in each hand, palms up, with your arms out to the sides at shoulder height.",
+    "Keep your upper arms still and curl the handles toward your head.",
+    "Squeeze your biceps.",
+    "Straighten your arms slowly back out to the sides."
+  ],
+  "textSource": "exercisedb"
+}

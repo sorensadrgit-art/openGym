@@ -1,0 +1,22 @@
+{
+  "id": "4119",
+  "name": "power sled triceps extension",
+  "bodyPart": "upper arms",
+  "equipment": "sled machine",
+  "machineKind": "push-sled",
+  "target": "triceps",
+  "secondaryMuscles": [
+    "front delts",
+    "forearms"
+  ],
+  "category": "strength",
+  "description": "A triceps extension done on a sled machine, giving steady load through the whole motion.",
+  "instructions": [
+    "Set up on the sled and grip the handles or bar.",
+    "Keep your elbows tucked.",
+    "Extend your arms to straighten them.",
+    "Squeeze your triceps at the end.",
+    "Return slowly."
+  ],
+  "textSource": "opengym"
+}

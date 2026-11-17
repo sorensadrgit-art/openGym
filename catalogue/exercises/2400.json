@@ -1,0 +1,24 @@
+{
+  "id": "2400",
+  "name": "inverse leg curl (on pull-up cable machine)",
+  "bodyPart": "upper legs",
+  "equipment": "body weight",
+  "target": "hamstrings",
+  "secondaryMuscles": [
+    "glutes",
+    "calves"
+  ],
+  "category": "calisthenics",
+  "needs": [
+    "bench"
+  ],
+  "description": "A bodyweight inverse leg curl using a pull-up cable machine setup. Targets the hamstrings.",
+  "instructions": [
+    "Kneel on the seat of a pulldown machine, facing away, with your lower legs locked under the pads.",
+    "Keep your body straight from knees to head, hands ready in front of you.",
+    "Lean forward slowly, letting your hamstrings control the descent.",
+    "Catch yourself lightly on a low step if needed.",
+    "Pull yourself back up to kneeling with your hamstrings."
+  ],
+  "textSource": "exercisedb"
+}

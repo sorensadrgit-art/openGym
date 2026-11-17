@@ -1,0 +1,21 @@
+{
+  "id": "3641",
+  "name": "weighted kneeling step with swing",
+  "bodyPart": "shoulders",
+  "equipment": "weighted",
+  "target": "front delts",
+  "secondaryMuscles": [
+    "triceps",
+    "core"
+  ],
+  "category": "strength",
+  "description": "A kneeling step combined with a weighted swing. It trains the shoulders and core.",
+  "instructions": [
+    "Kneel tall on both knees, holding a weight plate with both hands in front of your hips.",
+    "Step one foot forward into a half-kneeling position.",
+    "At the same time, swing the plate up overhead with straight arms.",
+    "Lower the plate and bring the foot back to kneeling.",
+    "Finish your reps, then step with the other leg."
+  ],
+  "textSource": "exercisedb"
+}

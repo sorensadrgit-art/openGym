@@ -1,0 +1,22 @@
+{
+  "id": "3162",
+  "name": "bodyweight standing one arm row",
+  "bodyPart": "back",
+  "equipment": "body weight",
+  "target": "upper back",
+  "secondaryMuscles": [
+    "biceps",
+    "forearms"
+  ],
+  "category": "strength",
+  "description": "A standing one arm row with your body weight, leaning back from a wall bar and pulling yourself in. Good for the upper back and lats.",
+  "instructions": [
+    "Stand facing a wall bar with your feet near its base.",
+    "Hold a rung at chest height with one hand.",
+    "Lean back until your arm is straight and your body is in a line.",
+    "Row your chest toward the bar, squeezing your shoulder blade.",
+    "Lower slowly, finish the reps, then switch arms."
+  ],
+  "femaleVariant": "3159",
+  "textSource": "exercisedb"
+}

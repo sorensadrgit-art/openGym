@@ -1,0 +1,20 @@
+{
+  "id": "2414",
+  "name": "barbell standing concentration curl",
+  "bodyPart": "upper arms",
+  "equipment": "barbell",
+  "target": "biceps",
+  "secondaryMuscles": [
+    "forearms"
+  ],
+  "category": "strength",
+  "description": "A barbell curl done bent forward at the hips with the arms hanging, so the biceps work without help from the body.",
+  "instructions": [
+    "Stand with your feet wide and hold a barbell underhand, hands about shoulder-width apart.",
+    "Hinge forward until your torso is almost level with the floor, arms hanging straight down.",
+    "Keep your upper arms still and curl the bar toward your face.",
+    "Squeeze your biceps at the top.",
+    "Lower the bar slowly until your arms are straight."
+  ],
+  "textSource": "exercisedb"
+}

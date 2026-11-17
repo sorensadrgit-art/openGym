@@ -1,0 +1,21 @@
+{
+  "id": "3295",
+  "name": "front lever reps",
+  "bodyPart": "back",
+  "equipment": "body weight",
+  "target": "upper back",
+  "secondaryMuscles": [
+    "core",
+    "front delts"
+  ],
+  "category": "calisthenics",
+  "description": "A rep-based version of the front lever, pulling the body in a horizontal line from a bar. It trains the lats, upper back and core.",
+  "instructions": [
+    "Hang from a bar with an overhand grip, shoulder-width apart.",
+    "Lift your body into a front lever: straight and level with the floor, arms straight.",
+    "Keep your body level and pull the bar toward your hips by bending your elbows.",
+    "Lower slowly back to straight arms without dropping your hips.",
+    "Lower your legs to rest between sets."
+  ],
+  "textSource": "exercisedb"
+}

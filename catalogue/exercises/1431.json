@@ -1,0 +1,32 @@
+{
+  "id": "1431",
+  "name": "assisted standing chin-up",
+  "bodyPart": "back",
+  "equipment": "leverage machine",
+  "machineKind": "assisted-pullup",
+  "target": "lats",
+  "secondaryMuscles": [
+    "biceps",
+    "forearms"
+  ],
+  "category": "strength",
+  "description": "A chin-up done on an assisted machine that takes part of your body weight. It builds the lats and biceps while you work up to full chin-ups.",
+  "instructions": [
+    "Set the assistance and stand on the platform.",
+    "Grip the close handles with your palms facing you, arms straight.",
+    "Pull yourself up, driving your elbows down to your sides.",
+    "Bring your chin above the handles.",
+    "Lower slowly to straight arms."
+  ],
+  "muscleMap": {
+    "primaries": [
+      "lats"
+    ],
+    "secondaries": [
+      "biceps",
+      "rear-delts",
+      "forearm"
+    ]
+  },
+  "textSource": "exercisedb"
+}

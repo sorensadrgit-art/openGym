@@ -1,0 +1,20 @@
+{
+  "id": "1640",
+  "name": "cable rope one arm hammer preacher curl",
+  "bodyPart": "upper arms",
+  "equipment": "cable",
+  "target": "biceps",
+  "secondaryMuscles": [
+    "forearms"
+  ],
+  "category": "strength",
+  "description": "A one-arm hammer preacher curl with a rope on a cable. It targets the brachialis and the biceps on one side.",
+  "instructions": [
+    "Attach a rope to a low pulley and place a preacher bench in front of it.",
+    "Sit at the bench with one upper arm on the pad and hold the rope with a neutral grip, thumb up.",
+    "Keep your upper arm on the pad and curl the rope toward your shoulder.",
+    "Squeeze at the top.",
+    "Lower slowly to a straight arm, finish the reps, then switch arms."
+  ],
+  "textSource": "exercisedb"
+}

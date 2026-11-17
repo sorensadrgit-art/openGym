@@ -1,0 +1,29 @@
+{
+  "id": "1393",
+  "name": "smith one leg floor calf raise",
+  "bodyPart": "lower legs",
+  "equipment": "smith machine",
+  "machineKind": "smith",
+  "target": "calves",
+  "secondaryMuscles": [
+    "hamstrings",
+    "glutes"
+  ],
+  "category": "strength",
+  "description": "A one-leg calf raise lifting a smith machine bar from the floor. It works each calf on its own under a guided bar path.",
+  "instructions": [
+    "Set the smith bar at shoulder height and step under it so it rests across your upper back.",
+    "Unrack it and stand on one foot, bending the other leg behind you.",
+    "Rise as high as you can onto the ball of your standing foot.",
+    "Pause, then lower your heel back to the floor.",
+    "Finish the reps, then switch legs."
+  ],
+  "muscleMap": {
+    "primaries": [
+      "calves"
+    ],
+    "secondaries": []
+  },
+  "femaleVariant": "2672",
+  "textSource": "exercisedb"
+}

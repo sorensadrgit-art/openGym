@@ -1,0 +1,22 @@
+{
+  "id": "0764",
+  "name": "smith reverse-grip press",
+  "bodyPart": "chest",
+  "equipment": "smith machine",
+  "machineKind": "smith",
+  "target": "pectorals",
+  "secondaryMuscles": [
+    "triceps",
+    "front delts"
+  ],
+  "category": "strength",
+  "description": "A press with an underhand grip on the smith bar, lowering to the chest and pressing back up. It trains the upper chest, shoulders and triceps.",
+  "instructions": [
+    "Set a flat bench in the smith machine so the bar lines up with your lower chest.",
+    "Lie back and grip the bar underhand, palms facing you, about shoulder-width apart.",
+    "Unrack the bar and lower it to your lower chest, elbows close to your body.",
+    "Press it back up until your arms are straight.",
+    "Lower slowly and repeat."
+  ],
+  "textSource": "exercisedb"
+}

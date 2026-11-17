@@ -1,0 +1,20 @@
+{
+  "id": "1628",
+  "name": "ez barbell spider curl",
+  "bodyPart": "upper arms",
+  "equipment": "ez barbell",
+  "target": "biceps",
+  "secondaryMuscles": [
+    "forearms"
+  ],
+  "category": "strength",
+  "description": "A spider curl with an EZ bar, lying chest down on an incline bench. It isolates the biceps with no swing.",
+  "instructions": [
+    "Lie chest down on an incline bench with your feet on the floor.",
+    "Let your arms hang straight down and hold an EZ bar with an underhand grip.",
+    "Keep your upper arms still and curl the bar up toward your face.",
+    "Squeeze at the top.",
+    "Lower slowly until your arms are straight."
+  ],
+  "textSource": "exercisedb"
+}

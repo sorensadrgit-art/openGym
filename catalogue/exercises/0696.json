@@ -1,0 +1,21 @@
+{
+  "id": "0696",
+  "name": "self assisted inverse leg curl (on floor)",
+  "bodyPart": "upper legs",
+  "equipment": "body weight",
+  "target": "hamstrings",
+  "secondaryMuscles": [
+    "glutes",
+    "calves"
+  ],
+  "category": "calisthenics",
+  "description": "Kneeling with your heels anchored, you lower your body forward under hamstring control and use your hands to help you back up. Uses only your body weight.",
+  "instructions": [
+    "Kneel on a mat and hook your heels under a bench or other sturdy support behind you.",
+    "Keep your body straight from knees to head, hands at your chest.",
+    "Lean forward slowly, resisting with your hamstrings.",
+    "Catch yourself with your hands when you can no longer hold the descent.",
+    "Push off lightly with your hands and pull yourself back up with your hamstrings."
+  ],
+  "textSource": "exercisedb"
+}

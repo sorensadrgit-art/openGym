@@ -1,0 +1,22 @@
+{
+  "id": "1351",
+  "name": "lever t-bar reverse grip row",
+  "bodyPart": "back",
+  "equipment": "leverage machine",
+  "machineKind": "t-bar-row",
+  "target": "upper back",
+  "secondaryMuscles": [
+    "biceps",
+    "forearms"
+  ],
+  "category": "strength",
+  "description": "A T-bar style machine row done standing bent over with a reverse grip. It works the upper back, lats and biceps.",
+  "instructions": [
+    "Stand on the platform with your feet hip-width apart and your knees slightly bent.",
+    "Hinge forward with a flat back and grip the handles underhand.",
+    "Pull the handles toward your lower ribs, keeping your elbows close to your body.",
+    "Squeeze your shoulder blades at the top.",
+    "Lower slowly until your arms are straight."
+  ],
+  "textSource": "exercisedb"
+}

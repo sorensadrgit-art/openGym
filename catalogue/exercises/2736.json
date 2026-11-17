@@ -1,0 +1,44 @@
+{
+  "id": "2736",
+  "name": "lever reverse grip lateral pulldown",
+  "bodyPart": "back",
+  "equipment": "leverage machine",
+  "machineKind": "lat-pulldown",
+  "target": "lats",
+  "secondaryMuscles": [
+    "biceps",
+    "rhomboids",
+    "rear delts"
+  ],
+  "category": "strength",
+  "description": "A reverse grip lat pulldown on a machine. Builds the lats and biceps.",
+  "instructions": [
+    "Adjust the seat so your knees fit under the pads and sit down.",
+    "Grip the handles with your palms facing you, arms straight.",
+    "Pull the handles down toward your upper chest, driving your elbows down.",
+    "Squeeze your back at the bottom.",
+    "Let the handles rise slowly until your arms are straight."
+  ],
+  "muscleMap": {
+    "primaries": [
+      "lats"
+    ],
+    "secondaries": [
+      "biceps",
+      "rear-delts",
+      "forearm",
+      "trapezius",
+      "triceps"
+    ],
+    "weights": {
+      "lats": 1,
+      "biceps": 0.4,
+      "rear-delts": 0.4,
+      "forearm": 0.4,
+      "trapezius": 0.4,
+      "triceps": 0
+    }
+  },
+  "femaleVariant": "11302",
+  "textSource": "exercisedb"
+}

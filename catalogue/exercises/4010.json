@@ -1,0 +1,23 @@
+{
+  "id": "4010",
+  "name": "cable kneeling shoulder press",
+  "bodyPart": "shoulders",
+  "equipment": "cable",
+  "target": "front delts",
+  "secondaryMuscles": [
+    "triceps",
+    "core",
+    "upper chest",
+    "side delts"
+  ],
+  "category": "strength",
+  "description": "An overhead cable press from a kneeling position. It builds the shoulders and demands core stability.",
+  "instructions": [
+    "Kneel in front of a low cable and hold the handles at shoulder height.",
+    "Brace your abs.",
+    "Press the handles overhead.",
+    "Lower under control.",
+    "Keep your hips tall."
+  ],
+  "textSource": "opengym"
+}

@@ -1,0 +1,32 @@
+{
+  "id": "1317",
+  "name": "barbell reverse grip incline bench row",
+  "bodyPart": "back",
+  "equipment": "barbell",
+  "target": "upper back",
+  "secondaryMuscles": [
+    "biceps",
+    "forearms"
+  ],
+  "category": "strength",
+  "description": "A barbell row with an underhand grip, done chest down on an incline bench. The support removes momentum and targets the upper back and biceps.",
+  "instructions": [
+    "Set a bench to about 45 degrees and lie chest down on it, feet on the floor.",
+    "Grip the barbell below you underhand, palms facing forward, hands about shoulder-width apart.",
+    "Pull the bar toward your lower ribs, keeping your elbows close to your sides.",
+    "Squeeze your shoulder blades at the top.",
+    "Lower the bar slowly until your arms are straight."
+  ],
+  "muscleMap": {
+    "primaries": [
+      "lats",
+      "upper-back"
+    ],
+    "secondaries": [
+      "biceps",
+      "rear-delts",
+      "forearm"
+    ]
+  },
+  "textSource": "exercisedb"
+}

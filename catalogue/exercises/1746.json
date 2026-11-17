@@ -1,0 +1,20 @@
+{
+  "id": "1746",
+  "name": "exercise ball supine triceps extension",
+  "bodyPart": "upper arms",
+  "equipment": "dumbbell",
+  "target": "triceps",
+  "secondaryMuscles": [
+    "front delts"
+  ],
+  "category": "strength",
+  "description": "A dumbbell triceps extension done on an exercise ball, lowering the weight behind your head. Targets the triceps and challenges your balance.",
+  "instructions": [
+    "Sit on a stability ball with a dumbbell in each hand, then walk forward until your upper back rests on the ball.",
+    "Lift your hips level and press the dumbbells straight up, palms facing each other.",
+    "Keep your upper arms still and bend your elbows to lower the dumbbells beside your head.",
+    "Straighten your arms to press them back up.",
+    "Keep your hips up for the whole set."
+  ],
+  "textSource": "exercisedb"
+}

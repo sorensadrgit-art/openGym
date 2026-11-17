@@ -1,0 +1,21 @@
+{
+  "id": "0697",
+  "name": "self assisted inverse leg curl",
+  "bodyPart": "upper legs",
+  "equipment": "body weight",
+  "target": "hamstrings",
+  "secondaryMuscles": [
+    "glutes",
+    "calves"
+  ],
+  "category": "calisthenics",
+  "description": "Kneeling with your ankles locked under rollers, you lower your torso forward and use your hands to help you back up. A body weight move for the hamstrings.",
+  "instructions": [
+    "Kneel on the pad with your ankles locked under the rollers.",
+    "Keep your body straight from knees to head, arms crossed or ready in front.",
+    "Lean forward slowly, resisting with your hamstrings.",
+    "Catch yourself with your hands on the floor at the bottom.",
+    "Push off lightly and pull yourself back up to kneeling with your hamstrings."
+  ],
+  "textSource": "exercisedb"
+}

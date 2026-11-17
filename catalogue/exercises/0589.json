@@ -1,0 +1,21 @@
+{
+  "id": "0589",
+  "name": "lever one arm bent over row",
+  "bodyPart": "back",
+  "equipment": "barbell",
+  "target": "upper back",
+  "secondaryMuscles": [
+    "biceps",
+    "forearms"
+  ],
+  "category": "strength",
+  "description": "A one arm row pulling the loaded end of a barbell anchored at the floor. It works the lats and upper back one side at a time.",
+  "instructions": [
+    "Anchor one end of a barbell in a corner or landmine and load the other end.",
+    "Stand beside the loaded end and hinge forward with a flat back and soft knees.",
+    "Grip the bar just behind the plate with one hand, arm straight.",
+    "Row the bar toward your hip, keeping your elbow close to your side.",
+    "Lower slowly, finish the reps, then switch sides."
+  ],
+  "textSource": "exercisedb"
+}

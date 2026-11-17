@@ -1,0 +1,38 @@
+{
+  "id": "0526",
+  "name": "kettlebell double alternating hang clean",
+  "bodyPart": "upper arms",
+  "equipment": "kettlebell",
+  "target": "biceps",
+  "secondaryMuscles": [
+    "forearms",
+    "front delts"
+  ],
+  "category": "olympic",
+  "description": "You clean two kettlebells alternately from a hang to the rack. It works the hips, back, shoulders and grip.",
+  "instructions": [
+    "Stand with your feet shoulder-width apart, a kettlebell hanging in each hand.",
+    "Hinge slightly at the hips with a flat back.",
+    "Drive your hips forward and clean one kettlebell to the rack position at your shoulder, keeping it close to your body.",
+    "Lower it back to the hang as you clean the other one.",
+    "Keep alternating sides in a steady rhythm."
+  ],
+  "muscleMap": {
+    "bodyPart": "full body",
+    "primaries": [
+      "quadriceps",
+      "gluteal",
+      "hamstring",
+      "trapezius"
+    ],
+    "secondaries": [
+      "calves",
+      "forearm",
+      "front-delts",
+      "lower-back",
+      "abs",
+      "obliques"
+    ]
+  },
+  "textSource": "exercisedb"
+}

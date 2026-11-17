@@ -1,0 +1,22 @@
+{
+  "id": "3221",
+  "name": "half knee bends (male)",
+  "bodyPart": "cardio",
+  "equipment": "body weight",
+  "target": "cardiovascular system",
+  "secondaryMuscles": [
+    "quadriceps",
+    "hip flexors",
+    "calves"
+  ],
+  "category": "cardio",
+  "description": "A steady cardio step: one knee comes up to about hip height while the standing leg gives a little bend, then the legs swap.",
+  "instructions": [
+    "Stand tall with your feet hip-width apart and your arms bent in front of your chest.",
+    "Lift one knee up to about hip height while the standing knee bends slightly.",
+    "Put the foot back down and lift the other knee the same way.",
+    "Keep alternating at a steady pace, chest up and core braced.",
+    "Repeat for 30-60 seconds."
+  ],
+  "textSource": "opengym"
+}

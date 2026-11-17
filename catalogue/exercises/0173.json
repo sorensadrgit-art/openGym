@@ -1,0 +1,21 @@
+{
+  "id": "0173",
+  "name": "cable incline triceps extension",
+  "bodyPart": "upper arms",
+  "equipment": "cable",
+  "target": "triceps",
+  "secondaryMuscles": [
+    "front delts"
+  ],
+  "category": "strength",
+  "description": "Overhead cable triceps extension from a low pulley with a straight bar. It isolates the triceps, especially the long head, through a deep stretch behind the head.",
+  "instructions": [
+    "Set an incline bench with its top end in front of a low pulley with a straight bar.",
+    "Lie back on the bench and hold the bar overhand, arms extended up over your head.",
+    "Keep your upper arms still and bend your elbows to lower the bar behind your head.",
+    "Straighten your arms to bring the bar back up.",
+    "Keep your elbows pointing up and close to your head."
+  ],
+  "femaleVariant": "3052",
+  "textSource": "exercisedb"
+}

@@ -1,0 +1,24 @@
+{
+  "id": "10856",
+  "name": "pilates machine overhead",
+  "bodyPart": "waist",
+  "equipment": "leverage machine",
+  "machineKind": "pilates",
+  "target": "abs",
+  "secondaryMuscles": [
+    "front delts",
+    "lats",
+    "core"
+  ],
+  "category": "pilates",
+  "description": "Reformer work with straps overhead. It trains the shoulders, abs and posture.",
+  "instructions": [
+    "Sit or kneel on the carriage holding the straps overhead.",
+    "Brace your core.",
+    "Press the straps forward and down in a controlled arc.",
+    "Return to the overhead position.",
+    "Keep your spine tall.",
+    "Move smoothly with breath."
+  ],
+  "textSource": "opengym"
+}

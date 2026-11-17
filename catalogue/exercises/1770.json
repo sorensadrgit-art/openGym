@@ -1,0 +1,20 @@
+{
+  "id": "1770",
+  "name": "biceps leg concentration curl",
+  "bodyPart": "upper arms",
+  "equipment": "body weight",
+  "target": "biceps",
+  "secondaryMuscles": [
+    "forearms"
+  ],
+  "category": "strength",
+  "description": "A seated curl with your elbow braced on your inner thigh. Isolates the biceps and cuts out swinging.",
+  "instructions": [
+    "Sit on the edge of a bench with your feet wide.",
+    "Brace one elbow against the inside of the same thigh and grip the opposite leg just above the ankle.",
+    "Curl your hand toward your shoulder, lifting that leg while it pushes down to resist.",
+    "Lower the leg slowly to the floor.",
+    "Finish the reps, then switch arms."
+  ],
+  "textSource": "exercisedb"
+}

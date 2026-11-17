@@ -1,0 +1,21 @@
+{
+  "id": "2327",
+  "name": "dumbbell reverse grip row (female)",
+  "bodyPart": "back",
+  "equipment": "dumbbell",
+  "target": "upper back",
+  "secondaryMuscles": [
+    "biceps",
+    "forearms"
+  ],
+  "category": "strength",
+  "description": "A bent-over dumbbell row using an underhand grip. Trains the upper back and biceps.",
+  "instructions": [
+    "Hold a dumbbell in each hand with an underhand grip, palms facing forward.",
+    "Hinge at the hips with a flat back and soft knees, arms hanging straight.",
+    "Row the dumbbells toward your hips, keeping your elbows close to your sides.",
+    "Squeeze your shoulder blades at the top.",
+    "Lower slowly until your arms are straight."
+  ],
+  "textSource": "exercisedb"
+}

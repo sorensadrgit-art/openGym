@@ -1,0 +1,22 @@
+{
+  "id": "0172",
+  "name": "cable incline pushdown",
+  "bodyPart": "back",
+  "equipment": "cable",
+  "target": "lats",
+  "secondaryMuscles": [
+    "triceps",
+    "front delts"
+  ],
+  "category": "strength",
+  "description": "A pulldown done reclined on an incline bench under a high pulley, bringing the bar from overhead to the upper chest. It targets the lats.",
+  "instructions": [
+    "Set an incline bench in front of a high pulley with a straight bar, so the cable comes from behind your head.",
+    "Sit back against the bench and grip the bar overhead with straight arms, hands a little wider than your shoulders.",
+    "Pull the bar down in front of your face to your upper chest, driving your elbows down and back.",
+    "Squeeze your back at the bottom.",
+    "Let the bar rise slowly until your arms are straight overhead again."
+  ],
+  "femaleVariant": "3051",
+  "textSource": "exercisedb"
+}

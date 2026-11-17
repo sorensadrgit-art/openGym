@@ -1,0 +1,22 @@
+{
+  "id": "0609",
+  "name": "london bridge",
+  "bodyPart": "back",
+  "equipment": "rope",
+  "target": "upper back",
+  "secondaryMuscles": [
+    "front delts",
+    "biceps",
+    "forearms"
+  ],
+  "category": "strength",
+  "description": "Holding a rope hung from a high point, you walk your hands down it to lean back, then climb back up. It trains the back, arms, grip and core.",
+  "instructions": [
+    "Stand facing a rope hung from a high anchor, feet close to its base.",
+    "Grip the rope with both hands, one above the other.",
+    "Walk your hands down the rope one at a time, leaning back as your knees bend.",
+    "Go as low as you can control.",
+    "Climb back up hand over hand to standing."
+  ],
+  "textSource": "exercisedb"
+}

@@ -1,0 +1,20 @@
+{
+  "id": "0059",
+  "name": "barbell lying preacher curl",
+  "bodyPart": "upper arms",
+  "equipment": "barbell",
+  "target": "biceps",
+  "secondaryMuscles": [
+    "forearms"
+  ],
+  "category": "strength",
+  "description": "A preacher curl performed while lying on the bench, isolating the biceps with no body swing.",
+  "instructions": [
+    "Lie face down on a flat bench with your shoulders at one end and your feet on the floor.",
+    "Let your arms hang straight down past the end of the bench, holding a barbell with an underhand grip.",
+    "Keep your upper arms still and curl the bar up toward your face.",
+    "Squeeze your biceps at the top.",
+    "Lower the bar slowly until your arms are straight again."
+  ],
+  "textSource": "exercisedb"
+}

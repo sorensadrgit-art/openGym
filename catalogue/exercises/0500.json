@@ -1,0 +1,22 @@
+{
+  "id": "0500",
+  "name": "isometric wipers",
+  "bodyPart": "chest",
+  "equipment": "body weight",
+  "target": "pectorals",
+  "secondaryMuscles": [
+    "front delts",
+    "triceps",
+    "core"
+  ],
+  "category": "isometric",
+  "description": "From the bottom of a wide push-up, you shift your body from one hand to the other without coming up. It works the chest, shoulders and triceps.",
+  "instructions": [
+    "Get into a push-up position with your hands wider than your shoulders.",
+    "Lower your chest until it is just above the floor.",
+    "Stay low and shift your body toward one hand.",
+    "Slide across to the other hand without pushing up.",
+    "Keep your body straight and your core tight the whole time."
+  ],
+  "textSource": "exercisedb"
+}

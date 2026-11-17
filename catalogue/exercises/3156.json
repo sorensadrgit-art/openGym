@@ -1,0 +1,22 @@
+{
+  "id": "3156",
+  "name": "bodyweight standing close-grip one arm row",
+  "bodyPart": "back",
+  "equipment": "body weight",
+  "target": "upper back",
+  "secondaryMuscles": [
+    "biceps",
+    "forearms"
+  ],
+  "category": "strength",
+  "description": "A standing one arm row with your body weight, leaning back from a wall bar and pulling yourself in. It works the muscles between and around the shoulder blades.",
+  "instructions": [
+    "Stand facing a wall bar with your feet close to it.",
+    "Grip a rung at chest height with one hand.",
+    "Lean back until that arm is straight, body in a line from head to heels.",
+    "Pull your chest toward the bar, keeping your elbow close to your side.",
+    "Lower back slowly, finish the reps, then switch arms."
+  ],
+  "femaleVariant": "3155",
+  "textSource": "exercisedb"
+}

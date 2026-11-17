@@ -1,0 +1,20 @@
+{
+  "id": "1667",
+  "name": "dumbbell one arm reverse spider curl",
+  "bodyPart": "upper arms",
+  "equipment": "dumbbell",
+  "target": "biceps",
+  "secondaryMuscles": [
+    "forearms"
+  ],
+  "category": "strength",
+  "description": "A one-arm reverse spider curl, with an overhand grip over a bench. It works the forearms and brachialis.",
+  "instructions": [
+    "Lie chest down on an incline bench with your feet on the floor.",
+    "Let one arm hang straight down holding a dumbbell with an overhand grip, and hold the bench with the other hand.",
+    "Keep your upper arm still and curl the dumbbell up.",
+    "Pause at the top.",
+    "Lower slowly to a straight arm, finish the reps, then switch arms."
+  ],
+  "textSource": "exercisedb"
+}

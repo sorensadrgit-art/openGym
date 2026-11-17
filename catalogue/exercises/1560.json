@@ -1,0 +1,21 @@
+{
+  "id": "1560",
+  "name": "exercise ball seated hamstring stretch",
+  "bodyPart": "upper legs",
+  "equipment": "stability ball",
+  "target": "hamstrings",
+  "secondaryMuscles": [
+    "glutes",
+    "lower back"
+  ],
+  "category": "stretching",
+  "description": "Seated on a stability ball with one leg extended, you lean forward to stretch the back of the thigh.",
+  "instructions": [
+    "Sit tall on a stability ball with your feet flat on the floor.",
+    "Slide one foot forward and straighten that leg, heel on the floor and toes up.",
+    "Rest your hands on your bent knee and lean forward from the hips with a flat back.",
+    "Stop when you feel a stretch behind the straight thigh and hold for 20-30 seconds.",
+    "Sit back up and switch legs."
+  ],
+  "textSource": "exercisedb"
+}

@@ -1,0 +1,21 @@
+{
+  "id": "0430",
+  "name": "dumbbell standing triceps extension",
+  "bodyPart": "upper arms",
+  "equipment": "dumbbell",
+  "target": "triceps",
+  "secondaryMuscles": [
+    "front delts"
+  ],
+  "category": "strength",
+  "description": "Standing, you lower a dumbbell behind your head and press it back up. It builds the back of the upper arm.",
+  "instructions": [
+    "Stand tall and hold one dumbbell with both hands under its top plate.",
+    "Press it overhead with your arms straight.",
+    "Keep your upper arms close to your head and bend your elbows to lower the dumbbell behind your head.",
+    "Straighten your arms to lift it back up.",
+    "Keep your core tight and avoid arching your back."
+  ],
+  "femaleVariant": "2390",
+  "textSource": "exercisedb"
+}

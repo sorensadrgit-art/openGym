@@ -1,0 +1,21 @@
+{
+  "id": "0496",
+  "name": "inverse leg curl (bench support)",
+  "bodyPart": "upper legs",
+  "equipment": "body weight",
+  "target": "hamstrings",
+  "secondaryMuscles": [
+    "glutes",
+    "calves"
+  ],
+  "category": "calisthenics",
+  "description": "Lying or kneeling with your feet anchored on a bench, you bend the knees and bring your body upright. It strongly works the hamstrings.",
+  "instructions": [
+    "Kneel on the pad with your ankles locked under the support behind you.",
+    "Keep your body straight from knees to head, arms crossed or in front.",
+    "Lean forward slowly, letting your hamstrings control the descent.",
+    "Go as low as you can control.",
+    "Pull yourself back up to kneeling with your hamstrings."
+  ],
+  "textSource": "exercisedb"
+}

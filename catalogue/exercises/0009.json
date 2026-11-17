@@ -1,0 +1,32 @@
+{
+  "id": "0009",
+  "name": "assisted chest dip (kneeling)",
+  "bodyPart": "chest",
+  "equipment": "leverage machine",
+  "machineKind": "assisted-pullup",
+  "target": "pectorals",
+  "secondaryMuscles": [
+    "triceps",
+    "front delts"
+  ],
+  "category": "strength",
+  "description": "A machine-assisted chest dip performed from a kneeling pad, so you can train dips with less of your bodyweight.",
+  "instructions": [
+    "Adjust the machine to your desired height and secure your knees on the pad.",
+    "Grasp the handles with your palms facing down and your arms fully extended.",
+    "Lower your body by bending your elbows until your upper arms are parallel to the floor.",
+    "Pause for a moment, then push yourself back up to the starting position.",
+    "Repeat for the desired number of repetitions."
+  ],
+  "muscleMap": {
+    "primaries": [
+      "chest"
+    ],
+    "secondaries": [
+      "triceps",
+      "front-delts"
+    ]
+  },
+  "femaleVariant": "2528",
+  "textSource": "exercisedb"
+}

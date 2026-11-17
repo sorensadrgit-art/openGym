@@ -1,0 +1,33 @@
+{
+  "id": "0762",
+  "name": "smith rear delt row",
+  "bodyPart": "shoulders",
+  "equipment": "smith machine",
+  "machineKind": "smith",
+  "target": "rear delts",
+  "secondaryMuscles": [
+    "trapezius",
+    "rhomboids",
+    "biceps"
+  ],
+  "category": "strength",
+  "description": "A wide-grip row that pulls toward the upper chest to hit the back of the shoulders. It trains the rear delts and upper back.",
+  "instructions": [
+    "Set the smith bar at about knee height and stand close to it.",
+    "Hinge forward with a flat back and grip the bar wider than your shoulders.",
+    "Unrack the bar and let your arms hang straight.",
+    "Pull the bar toward your upper chest, leading with your elbows out to the sides.",
+    "Squeeze the backs of your shoulders, then lower slowly."
+  ],
+  "muscleMap": {
+    "primaries": [
+      "rear-delts"
+    ],
+    "secondaries": [
+      "trapezius",
+      "lats",
+      "upper-back"
+    ]
+  },
+  "textSource": "exercisedb"
+}

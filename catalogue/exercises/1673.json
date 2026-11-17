@@ -1,0 +1,21 @@
+{
+  "id": "1673",
+  "name": "dumbbell preacher curl over exercise ball",
+  "bodyPart": "upper arms",
+  "equipment": "dumbbell",
+  "target": "biceps",
+  "secondaryMuscles": [
+    "forearms"
+  ],
+  "category": "strength",
+  "description": "A preacher curl kneeling behind an exercise ball with the upper arms draped over it. It trains the biceps with some balance demand.",
+  "instructions": [
+    "Kneel behind a stability ball and lean your chest against it.",
+    "Drape your upper arms over the ball with a dumbbell in each hand, palms up.",
+    "Keep your upper arms on the ball and curl the dumbbells toward your shoulders.",
+    "Squeeze at the top.",
+    "Lower slowly until your arms are almost straight."
+  ],
+  "femaleVariant": "3762",
+  "textSource": "exercisedb"
+}

@@ -1,0 +1,24 @@
+{
+  "id": "4866",
+  "name": "barbell z press",
+  "bodyPart": "shoulders",
+  "equipment": "barbell",
+  "target": "front delts",
+  "secondaryMuscles": [
+    "triceps",
+    "core",
+    "upper chest",
+    "lower back",
+    "side delts"
+  ],
+  "category": "strength",
+  "description": "A seated floor overhead press with legs straight. It builds shoulders and core.",
+  "instructions": [
+    "Sit on the floor with legs straight and the bar at your shoulders.",
+    "Brace your core.",
+    "Press the bar overhead.",
+    "Lock out your arms.",
+    "Lower to the shoulders."
+  ],
+  "textSource": "opengym"
+}

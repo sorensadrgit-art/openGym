@@ -1,0 +1,20 @@
+{
+  "id": "0421",
+  "name": "dumbbell standing one arm concentration curl",
+  "bodyPart": "upper arms",
+  "equipment": "dumbbell",
+  "target": "biceps",
+  "secondaryMuscles": [
+    "forearms"
+  ],
+  "category": "strength",
+  "description": "Standing and leaning forward, you curl one dumbbell with your elbow braced on your thigh. It isolates the biceps one side at a time.",
+  "instructions": [
+    "Stand with your feet wide and a dumbbell in one hand.",
+    "Bend forward at the hips until your torso is nearly level with the floor, free hand on your thigh.",
+    "Let the working arm hang straight down.",
+    "Keep your upper arm still and curl the dumbbell toward your face.",
+    "Lower slowly, finish the reps, then switch arms."
+  ],
+  "textSource": "exercisedb"
+}

@@ -1,0 +1,22 @@
+{
+  "id": "0139",
+  "name": "biceps narrow pull-ups",
+  "bodyPart": "upper arms",
+  "equipment": "body weight",
+  "target": "biceps",
+  "secondaryMuscles": [
+    "forearms",
+    "rear delts"
+  ],
+  "category": "calisthenics",
+  "description": "A body weight row under a low bar with a narrow underhand grip. It emphasises the biceps and the upper back.",
+  "instructions": [
+    "Set a bar at about waist height and lie underneath it.",
+    "Grip it with your palms facing you and your hands close together.",
+    "Straighten your body from head to heels, heels on the floor.",
+    "Pull your chest up to the bar, keeping your elbows close to your sides.",
+    "Lower slowly until your arms are straight."
+  ],
+  "femaleVariant": "2694",
+  "textSource": "exercisedb"
+}

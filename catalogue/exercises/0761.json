@@ -1,0 +1,22 @@
+{
+  "id": "0761",
+  "name": "smith narrow row",
+  "bodyPart": "back",
+  "equipment": "smith machine",
+  "machineKind": "smith",
+  "target": "upper back",
+  "secondaryMuscles": [
+    "biceps",
+    "rear delts"
+  ],
+  "category": "strength",
+  "description": "A row with a narrow grip on the smith machine, pulling toward the torso. It works the mid back and the muscles between the shoulder blades.",
+  "instructions": [
+    "Set the smith bar at about knee height and stand close to it.",
+    "Hinge at the hips with a flat back and grip the bar with your hands close together.",
+    "Unrack the bar and let your arms hang straight.",
+    "Row the bar to your lower chest, keeping your elbows close to your body.",
+    "Lower it slowly until your arms are straight."
+  ],
+  "textSource": "exercisedb"
+}
