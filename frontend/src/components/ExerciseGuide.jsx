@@ -3,7 +3,7 @@
 // for an exercise that has a guide (content/exercise-guides.js); every other sheet is unchanged.
 //
 // Loaded on demand from sheets.jsx, so the text is not in the app's first download.
-import { lazy, Suspense } from 'react'
+import { Component, lazy, Suspense } from 'react'
 import { t, hasTranslation, getLang, baseLang, exerciseNameFor, exerciseNameClass } from '../lib/i18n.js'
 import { exOr } from '../lib/exercises.js'
 import { guideFor, ladderFor, isReviewed } from '../lib/exercise-guide.js'
@@ -15,6 +15,12 @@ import '../views/onboarding.css'
 // a still key pose with the words that go with it when it cannot. Loaded on demand, so the 3D
 // code and the poses stay out of the app's first download.
 const MannequinDemo = lazy(() => import('./mannequin/MannequinDemo.jsx'))
+
+class DemoErrorBoundary extends Component {
+  state = { failed: false }
+  static getDerivedStateFromError() { return { failed: true } }
+  render() { return this.state.failed ? null : this.props.children }
+}
 
 export default function ExerciseGuide({ ex, onOpen }) {
   const g = guideFor(ex?.id)
@@ -32,9 +38,11 @@ export default function ExerciseGuide({ ex, onOpen }) {
     <h4 className="sec">{t('Do it well')}{hasEnglishText && <span className="dim" style={{ textTransform: 'none', letterSpacing: 0 }}> · {t('instructions in English')}</span>}</h4>
     <ul className="iv-guide-cues">{g.cues.map((c, i) => <li key={i}>{t(c)}</li>)}</ul>
 
-    {hasPose(g.pattern) && <Suspense fallback={null}>
-      <MannequinDemo key={g.pattern} pattern={g.pattern} />
-    </Suspense>}
+    {hasPose(g.pattern) && <DemoErrorBoundary key={g.pattern}>
+      <Suspense fallback={null}>
+        <MannequinDemo pattern={g.pattern} />
+      </Suspense>
+    </DemoErrorBoundary>}
 
     <h4 className="sec">{t('Common mistakes')}</h4>
     <ul className="iv-guide-mistakes">

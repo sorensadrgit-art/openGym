@@ -6389,7 +6389,7 @@ export default {
   "Motion is off on this device, so the key position is shown instead.": "Gerakan dimatikan di perangkat ini, jadi posisi utama ditampilkan sebagai gantinya.",
   "This device cannot show the 3D movement, so the key position is shown instead.": "Perangkat ini tidak dapat menampilkan gerakan 3D, jadi posisi utama ditampilkan sebagai gantinya.",
   "Standing tall, feet about shoulder width apart.": "Berdiri tegak, kaki selebar bahu.",
-  "Knees and hips bend together as you sit down.": "Lutut dan pinggul lutut bersama-sama saat Anda duduk.",
+  "Knees and hips bend together as you sit down.": "Lutut dan pinggul menekuk bersamaan saat Anda menurunkan tubuh ke posisi duduk.",
   "Hips back and down between the heels, chest up, knees over the toes.": "Pinggul ke belakang dan turun di antara tumit, dada terangkat, lutut di atas jari kaki.",
   "Push through the floor: hips and chest rise together.": "Dorong lantai: pinggul dan dada naik bersama.",
 };

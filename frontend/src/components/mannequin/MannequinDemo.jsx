@@ -82,8 +82,8 @@ export default function MannequinDemo({ pattern, createScene }) {
 
   const key = keyFrameFor(pattern)
   if (!key) return null
-  const note = (frame || key).note
   const still = why !== null
+  const note = still ? key.note : (frame || key).note
 
   return <section className="mm-demo" aria-label={t('Movement demo')}>
     <h4 className="sec">{t('Movement demo')}</h4>

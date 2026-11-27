@@ -9,7 +9,7 @@
 .mm-still-body{stroke:var(--acc-ink);stroke-width:.075}
 .mm-still-near path{stroke:var(--label);stroke-width:.07}
 .mm-still-far path{stroke:var(--label-3);stroke-width:.055}
-.mm-still-head{fill:var(--acc-ink);stroke:none}
+.mm-still .mm-still-head{fill:var(--acc-ink);stroke:none}
 .mm-still-floor{stroke:var(--label-4);stroke-width:.018}
 .mm-demo-text{margin:10px 0 0;font-size:var(--fs-body);line-height:var(--lh-body)}
 .mm-demo-note{margin:8px 0 0;font-size:var(--fs-footnote);line-height:var(--lh-footnote,1.4);color:var(--label-2)}

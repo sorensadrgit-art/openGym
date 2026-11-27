@@ -6423,7 +6423,7 @@ export default {
   "Movement demo": "동작 데모",
   "Motion is off on this device, so the key position is shown instead.": "이 기기에서는 동작이 꺼져 있어 대신 주요 자세를 보여 줍니다.",
   "This device cannot show the 3D movement, so the key position is shown instead.": "이 기기에서는 3D 동작을 표시할 수 없어 대신 주요 자세를 보여 줍니다.",
-  "Standing tall, feet about shoulder width apart.": "어깨너비로 발을 모으고 똑바로 서세요.",
+  "Standing tall, feet about shoulder width apart.": "발을 어깨너비로 벌리고 똑바로 서세요.",
   "Knees and hips bend together as you sit down.": "앉을 때 무릎과 골반이 함께 굽혀집니다.",
   "Hips back and down between the heels, chest up, knees over the toes.": "발뒤꿈치 사이로 골반을 뒤로 낮추고, 가슴을 세우고, 무릎은 발끝 위로.",
   "Push through the floor: hips and chest rise together.": "바닥을 밀어내세요: 골반과 가슴이 함께 올라갑니다.",

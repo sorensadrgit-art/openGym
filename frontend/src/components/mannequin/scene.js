@@ -45,8 +45,6 @@ function bone(radius, length, material, flatten = 1) {
 }
 
 export async function createMannequinScene(container, { pattern, onFrame, onError } = {}) {
-  const probe = document.createElement('canvas')
-  if (!(probe.getContext('webgl2') || probe.getContext('webgl'))) throw Object.assign(new Error('webgl'), { code: 'webgl' })
   const loop = loopFor(pattern)
   if (!loop) throw Object.assign(new Error('no pose for ' + pattern), { code: 'npose' })
 

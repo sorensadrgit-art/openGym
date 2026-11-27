@@ -6434,8 +6434,8 @@ export default {
   "Movement demo": "ตัวอย่างการเคลื่อนไหว",
   "Motion is off on this device, so the key position is shown instead.": "การเคลื่อนไหวถูกปิดในเครื่องนี้ จึงแสดงท่าหลักแทน",
   "This device cannot show the 3D movement, so the key position is shown instead.": "เครื่องนี้แสดงการเคลื่อนไหว 3 มิติไม่ได้ จึงแสดงท่าหลักแทน",
-  "Standing tall, feet about shoulder width apart.": "ยืนตรง สะบ้ายาวประมาณความกว้างไหล่",
+  "Standing tall, feet about shoulder width apart.": "ยืนตัวตรง แยกเท้าให้ห่างกันประมาณความกว้างของไหล่",
   "Knees and hips bend together as you sit down.": "เข่าและสะโพกงอพร้อมกันขณะลงนั่ง",
-  "Hips back and down between the heels, chest up, knees over the toes.": "สะโพกไปด้านหลังและลงต่ำระหว่างส้มเท้า หน้าอกยกสูง เข่าอยู่เหนือปลายเท้า",
+  "Hips back and down between the heels, chest up, knees over the toes.": "สะโพกไปด้านหลังและลงต่ำระหว่างส้นเท้า หน้าอกยกสูง เข่าอยู่เหนือปลายเท้า",
   "Push through the floor: hips and chest rise together.": "ดันพื้น: สะโพกและหน้าอกยกขึ้นพร้อมกัน",
 }

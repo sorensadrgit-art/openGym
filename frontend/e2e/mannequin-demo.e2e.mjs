@@ -55,6 +55,26 @@ async function openSquatSheet(page) {
 
 const KEY_WORDS = 'Hips back and down between the heels'
 
+const demoChunk = /\/assets\/MannequinDemo-[^/]+\.js$/
+
+test('the exercise guide remains visible if the demo chunk fails to load', async ({ page }) => {
+  await enterAsGuestInDarkMode(page)
+  await page.route(demoChunk, route => route.abort())
+  const failed = page.waitForEvent('requestfailed', request => demoChunk.test(request.url()))
+  await openSquatSheet(page)
+  await failed
+  const guide = page.locator('.iv-guide')
+  await expect(guide.locator('.iv-guide-cues li').first()).toBeVisible()
+  await expect(guide.getByRole('heading', { name: 'Common mistakes' })).toBeVisible()
+  await expect(guide.locator('.mm-demo')).toHaveCount(0)
+})
+
+async function expectStillHead(still) {
+  const accent = await still.locator('.mm-still-body').first().evaluate(el => getComputedStyle(el).stroke)
+  await expect(still.locator('.mm-still-head')).toHaveCSS('fill', accent)
+  await expect(still.locator('.mm-still-head')).toHaveCSS('stroke', 'none')
+}
+
 test('a squat exercise shows the movement demo, and it plays when asked', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.emulateMedia({ colorScheme: 'dark', reducedMotion: 'no-preference' })
@@ -115,7 +135,7 @@ test('with motion off, the key pose is shown in words and nothing moves', async 
   await expect(demo).toBeVisible({ timeout: 10_000 })
   const still = demo.locator('[data-mm-still]')
   await expect(still).toBeVisible()
-  await expect(still.locator('path, circle, line')).not.toHaveCount(0)
+  await expectStillHead(still)
   await expect(demo.locator('.mm-demo-text')).toContainText(KEY_WORDS)
   await expect(demo).toContainText('Motion is off on this device')
   // Nothing animates: no rig is built, so nothing is drawn.
@@ -139,7 +159,9 @@ test('without WebGL, the key pose is shown in words and the demo says why', asyn
 
   const demo = page.locator('.mm-demo')
   await expect(demo).toBeVisible({ timeout: 10_000 })
-  await expect(demo.locator('[data-mm-still]')).toBeVisible()
+  const still = demo.locator('[data-mm-still]')
+  await expect(still).toBeVisible()
+  await expectStillHead(still)
   await expect(demo.locator('.mm-demo-text')).toContainText(KEY_WORDS)
   await expect(demo).toContainText('cannot show the 3D movement')
   await expect(demo.locator('canvas')).toHaveCount(0)

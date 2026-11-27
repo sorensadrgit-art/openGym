@@ -6418,6 +6418,6 @@ export default {
   "This device cannot show the 3D movement, so the key position is shown instead.": "此裝置無法顯示 3D 動作，因此改為顯示關鍵姿勢。",
   "Standing tall, feet about shoulder width apart.": "站直，雙腳約與肩同寬。",
   "Knees and hips bend together as you sit down.": "下蹲時，膝蓋和髖部同時彎曲。",
-  "Hips back and down between the heels, chest up, knees over the toes.": "髖部向後向下坐至腳跟之間，胸部挺起，膝蓋越過腳尖。",
+  "Hips back and down between the heels, chest up, knees over the toes.": "髖部向後向下坐至腳跟之間，胸部挺起，膝蓋對準腳尖。",
   "Push through the floor: hips and chest rise together.": "踩地：髖部和胸部同時上升。",
 }
